@@ -80,10 +80,17 @@ let functionArgs =
 
     pipe2 arg (many (ws1 >>? arg)) <| fun first rest -> first :: rest
 
+let rec carry args body =
+    match args with
+    | [] -> failwith "Met function with no args during parsing"
+    | [last] -> Function(last, body)
+    | first::rest -> Function(first, carry rest body)
+
 let pfunc =
-    (keyword "fun" >>. anyWs >>. functionArgs .>> anyWs)
-    .>>. (skipString "->" >>. anyWs >>. tier0Expr)
-    |>> Function
+    pipe2
+        (keyword "fun" >>. anyWs >>. functionArgs .>> anyWs)
+        (skipString "->" >>. anyWs >>. tier0Expr)
+        carry
 
 let monadBind =
     pipe2
@@ -107,7 +114,7 @@ let monadExec =
                     let appliedRest = applyBind' rest []
 
                     let bindExpr =
-                        Application(Application(Operator(">>=", false), body), Function([ bind ], appliedRest))
+                        Application(Application(Operator(">>=", false), body), Function(bind, appliedRest))
 
                     applyBind' [] (bindExpr :: acc)
                 | _ -> applyBind' rest (stmt :: acc)
@@ -233,7 +240,7 @@ let equation allowOperator =
         match args with
         | None -> Equation(name, body)
         | Some [] -> Equation(name, body)
-        | Some args' -> Equation(name, Function(args', body))
+        | Some args' -> Equation(name, carry args' body)
 
 let constructor =
     pipe2 plainName
@@ -244,8 +251,8 @@ let constructor =
     )
     <| fun name args ->
         match args with
-        | None -> Constructor(name, [])
-        | Some args' -> Constructor(name, args')
+        | None -> ConstructorCall(name, [])
+        | Some args' -> ConstructorCall(name, args')
 
 let typeMembers =
     skipChar '{' >>. anyWs >>. multiline (equation true) false
@@ -257,7 +264,7 @@ let ptype =
         (keyword "type" >>. anyWs1 >>. plainName .>> anyWs)
         (skipChar ':' >>. anyWs >>. commaSeparated constructor false false .>> anyWs)
         typeMembers
-    <| fun name cons members -> Type(name, cons, members)
+    <| fun name cons members -> TypeDeclaration(name, cons, members)
 
 let eval = keyword "eval" >>. anyWs >>. expression |>> Eval
 

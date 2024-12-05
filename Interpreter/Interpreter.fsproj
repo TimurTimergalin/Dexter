@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="Exceptions.fs" />
+        <Compile Include="Imperative.fs" />
+        <Compile Include="Value.fs" />
+        <Compile Include="ContextStack.fs" />
+        <Compile Include="Types.fs" />
+        <Compile Include="Main.fs" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Parser\Parser.fsproj" />
+    </ItemGroup>
+
+</Project>

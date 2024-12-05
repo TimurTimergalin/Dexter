@@ -5,7 +5,7 @@ open Parser.Ast
 open Parser.Context
 open Parser.Spaces
 
-let allowedNameChar c = System.Char.IsLetter c || System.Char.IsDigit c || c = '_' || c = '''
+let allowedNameChar c = System.Char.IsLetter c || System.Char.IsDigit c || c = '_'
 
 let name: DexterParser<_> =
     many1Satisfy2L (fun x -> allowedNameChar x && not (System.Char.IsDigit x)) allowedNameChar "valid identifier name"

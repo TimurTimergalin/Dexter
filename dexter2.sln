@@ -4,6 +4,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Parser", "Parser\Parser.fsp
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Testt", "Testt\Testt.fsproj", "{A50C86FF-2B7A-4A1B-9121-BC2295D02D63}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Interpreter", "Interpreter\Interpreter.fsproj", "{4415105E-23E7-4F39-84CC-AA7399DC1635}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{A50C86FF-2B7A-4A1B-9121-BC2295D02D63}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A50C86FF-2B7A-4A1B-9121-BC2295D02D63}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A50C86FF-2B7A-4A1B-9121-BC2295D02D63}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4415105E-23E7-4F39-84CC-AA7399DC1635}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4415105E-23E7-4F39-84CC-AA7399DC1635}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4415105E-23E7-4F39-84CC-AA7399DC1635}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4415105E-23E7-4F39-84CC-AA7399DC1635}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
