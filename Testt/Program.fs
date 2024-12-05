@@ -4,7 +4,7 @@ open Parser
 [<EntryPoint>]
 let main argv =
     let parser = Main.program
-    let result = run parser "match x {case(y)when{y}->printf 'lol'}"
+    let result = run parser "import abc.def, df from 'module' as m"
 
     match result with
     | Success(node, _, _) -> printfn $"S:{node}"

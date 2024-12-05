@@ -272,6 +272,8 @@ let import =
         stringLiteral
         |>> (function
         | StringLiteral(s) -> s)
+    
+    let alias = ws >>? keyword "as" >>. anyWs >>. plainName
 
     let targets =
         ((skipChar '*' >>% []) <|> commaSeparated namespacedName true false)
@@ -281,11 +283,11 @@ let import =
 
     keyword "import"
     >>. anyWs
-    >>. pipe2 (opt targets) source (fun targets' source' ->
+    >>. pipe3 (opt targets) source (opt alias) (fun targets' source' alias' ->
         match targets' with
-        | None -> ImportNamespace source'
-        | Some [] -> ImportAll source'
-        | Some lst -> ImportFrom(source', lst))
+        | None -> ImportNamespace (source', alias')
+        | Some [] -> ImportAll (source', alias')
+        | Some lst -> ImportFrom(source', lst, alias'))
 
 let statement = entrypoint <|> import <|> tier1Statement
 
