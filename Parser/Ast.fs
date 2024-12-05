@@ -8,7 +8,7 @@ type Node =
     
     | NamespacedName of string list * Node
     | Identifier of string
-    | Operator of string
+    | Operator of string * bool
     | Application of Node * Node
     
     | Conditional of Node * Node * Node

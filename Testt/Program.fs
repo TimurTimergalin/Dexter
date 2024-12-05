@@ -1,11 +1,10 @@
 ﻿open FParsec
 open Parser
-open Parser.Literals
 
 [<EntryPoint>]
 let main argv =
     let parser = Main.program
-    let result = run parser "+(+a)"
+    let result = run parser "type A : Cons {let (^+) x = x}"
 
     match result with
     | Success(node, _, _) -> printfn $"S:{node}"

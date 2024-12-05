@@ -61,14 +61,26 @@ let illegalOperator lst =
 let illegalInfixOperator = illegalOperator (List.concat [illegalOperatorList;unaryOperatorList])
 let illegalOperatorDef = illegalOperator illegalOperatorList
 
-let anyOperator = many1 allowedOperatorChar |>> (List.map string >> String.concat "" >> Operator)
+let anyOperator = many1 allowedOperatorChar |>> (List.map string >> String.concat "")
 
 let operator' illegal = notFollowedByL illegal "illegal operator" >>. anyOperator
 
-let operator : DexterParser<_> = operator' illegalInfixOperator 
+let unaryOperator' = pstring "!" <|> pstring "!" <|> stringReturn "+" "^+" <|> stringReturn "-" "^-" .>> notFollowedBy allowedOperatorChar
 
-let prefixOperator: DexterParser<_> =
-    skipChar '(' >>. anyWs >>. operator' illegalOperatorDef .>> anyWs .>> skipChar ')'
+let optionalOperator pop = pipe2 pop (opt <| skipChar '?') <|
+                           fun op isOpt -> match isOpt with
+                                           | None -> Operator(op, false)
+                                           | Some(_) -> Operator(op, true)
+
+let operator : DexterParser<_> = optionalOperator <| operator' illegalInfixOperator
+
+let operatorDef' pop =
+    skipChar '(' >>. anyWs >>. pop .>> anyWs .>> skipChar ')'
+
+let prefixOperator: DexterParser<_> = operatorDef' (optionalOperator (operator' illegalOperatorDef))
+let operatorDef = operatorDef' ((operator' illegalOperatorDef |>> fun x -> Operator(x, false)) .>> notFollowedByL (skipChar '?') "optional operator")
+
+let unaryOperator = optionalOperator unaryOperator'
     
 let namespacedName, namsepacedNameRef = createParserForwardedToRef<Node, ParserContext>()
 namsepacedNameRef.Value <-

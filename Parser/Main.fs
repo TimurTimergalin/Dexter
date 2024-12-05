@@ -12,8 +12,10 @@ open Parser.Patterns
 open Parser.Spaces
 open Parser.debug
 
-let tier0Expr, tier0ExprRef = createParserForwardedToRef<Node, ParserContext>()
-let tier1Statement, tier1StatementRef = createParserForwardedToRef<Node, ParserContext>()
+let tier0Expr, tier0ExprRef = createParserForwardedToRef<Node, ParserContext> ()
+
+let tier1Statement, tier1StatementRef =
+    createParserForwardedToRef<Node, ParserContext> ()
 
 let exprInParentheses =
     skipChar '(' >>. anyWs >>. tier0Expr .>> anyWs .>> skipChar ')'
@@ -21,7 +23,10 @@ let exprInParentheses =
 let listLiteral = listOf tier0Expr |>> ListLiteral
 
 let compound =
-    skipChar '{' >>. anyWs >>. multiline tier1Statement false .>> anyWs .>> skipChar '}' |>> Compound
+    skipChar '{' >>. anyWs >>. multiline tier1Statement false
+    .>> anyWs
+    .>> skipChar '}'
+    |>> Compound
 
 let tier3Expr =
     choice
@@ -35,7 +40,7 @@ let tier3Expr =
 let tier2Expr =
     let unaryOperators = "+-~!"
 
-    pipe2 (anyOf unaryOperators |>> string) tier3Expr (fun op node -> Application(Operator op, node))
+    pipe2 unaryOperator tier3Expr (fun op node -> Application(op, node))
     <|> tier3Expr
 
 let application =
@@ -53,87 +58,104 @@ let application =
 
 let conditional: DexterParser<_> =
     pipe3
-        (keyword "if" >>? ws1 >>. tier0Expr .>> anyWs1) 
+        (keyword "if" >>? ws1 >>. tier0Expr .>> anyWs1)
         (skipString "then" >>. ws1 >>. tier0Expr .>> anyWs1)
         (skipString "else" >>. ws1 >>. tier0Expr)
         (fun x y z -> Conditional(x, y, z))
-        
+
 let case =
-    (skipString "case" >>. anyWs1 >>. pattern false) .>>. (anyWs >>. skipString "->" >>. anyWs >>. tier0Expr) |>> Case        
+    (skipString "case" >>. anyWs1 >>. pattern false)
+    .>>. (anyWs >>. skipString "->" >>. anyWs >>. tier0Expr)
+    |>> Case
 
 let tier1'5Expr = conditional <|> application
 
 let pmatch =
-    (keyword "match" >>. anyWs1 >>. tier1'5Expr .>> anyWs) .>>.
-    (skipChar '{' >>. anyWs >>. multiline1 case false .>> anyWs .>> skipChar '}') |>> Match
+    (keyword "match" >>. anyWs1 >>. tier1'5Expr .>> anyWs)
+    .>>. (skipChar '{' >>. anyWs >>. multiline1 case false .>> anyWs .>> skipChar '}')
+    |>> Match
 
 let functionArgs =
     let arg = patternInParenthesis true <|> tier1Pattern true
-    
-    pipe2 arg (many (ws1 >>? arg)) <| fun first rest -> first::rest
+
+    pipe2 arg (many (ws1 >>? arg)) <| fun first rest -> first :: rest
 
 let pfunc =
-    (skipString "fun" >>. anyWs1 >>. functionArgs .>> anyWs) .>>.
-    (skipString "->" >>. anyWs >>. tier0Expr) |>> Function
+    (skipString "fun" >>. anyWs1 >>. functionArgs .>> anyWs)
+    .>>. (skipString "->" >>. anyWs >>. tier0Expr)
+    |>> Function
 
 let monadBind =
     pipe2
-        (keyword "do" >>. anyWs1 >>. opt (pattern true .>>? ws .>>? skipString "<-" .>> anyWs))
-        tier0Expr <|
-        fun bind body -> match bind with
-                         | None -> MonadBind(SkipPattern, body)
-                         | Some bind' -> MonadBind(bind', body)
+        (keyword "do"
+         >>. anyWs1
+         >>. opt (pattern true .>>? ws .>>? skipString "<-" .>> anyWs))
+        tier0Expr
+    <| fun bind body ->
+        match bind with
+        | None -> MonadBind(SkipPattern, body)
+        | Some bind' -> MonadBind(bind', body)
 
 let monadExec =
     let applyBind stmts =
         let rec applyBind' stmts' acc =
             match stmts' with
             | [] -> Compound <| List.rev acc
-            | stmt::rest ->
+            | stmt :: rest ->
                 match stmt with
                 | MonadBind(bind, body) ->
-                    let appliedRest = applyBind'  rest []
-                    let bindExpr = Application(Application(Operator(">>="), body), Function([bind], appliedRest))
-                    applyBind' [] (bindExpr::acc)
-                | _ -> applyBind' rest (stmt::acc)
+                    let appliedRest = applyBind' rest []
+
+                    let bindExpr =
+                        Application(Application(Operator(">>=", false), body), Function([ bind ], appliedRest))
+
+                    applyBind' [] (bindExpr :: acc)
+                | _ -> applyBind' rest (stmt :: acc)
+
         applyBind' stmts []
-            
-    keyword "exec" >>. anyWs >>. skipChar '{' >>. anyWs >>.
-    multiline (monadBind <|> tier1Statement) false .>>
-    anyWs .>> skipChar '}' |>> applyBind
+
+    keyword "exec"
+    >>. anyWs
+    >>. skipChar '{'
+    >>. anyWs
+    >>. multiline (monadBind <|> tier1Statement) false
+    .>> anyWs
+    .>> skipChar '}'
+    |>> applyBind
 
 let tier1Expr = tier1'5Expr <|> pmatch <|> pfunc <|> monadExec
 
 tier0ExprRef.Value <-
     let operatorPrecedence =
         function
-        | "**" -> 0.
-        | "*" -> 1.
-        | "/" -> 1.
-        | "//" -> 1.
-        | "%" -> 1.
-        | "+" -> 2.
-        | "-" -> 2.
-        | ">>>" -> 3.
-        | "<<<" -> 3.
-        | "<" -> 4.
-        | ">" -> 4.
-        | "<=" -> 4.
-        | ">=" -> 4.
-        | "=" -> 5.
-        | "!=" -> 5.
-        | "&" -> 6.
-        | "^" -> 7.
-        | "|" -> 8.
-        | "&&" -> 9.
-        | "||" -> 10.
-        | "<|" -> 11.
-        | "|>" -> 12.
-        | "<<" -> 13.
-        | ">>" -> 13.
-        | ">>=" -> 14.
-        | "::" -> 15.
-        | _ -> 16.
+        | Operator("**", _) -> 0.
+        | Operator("*", _) -> 1.
+        | Operator("/", _) -> 1.
+        | Operator("//", _) -> 1.
+        | Operator("%", _) -> 1.
+        | Operator("+", _) -> 2.
+        | Operator("-", _) -> 2.
+        | Operator(">>>", _) -> 3.
+        | Operator("<<<", _) -> 3.
+        | Operator("<", _) -> 4.
+        | Operator(">", _) -> 4.
+        | Operator("<=", _) -> 4.
+        | Operator(">=", _) -> 4.
+        | Operator("=", _) -> 5.
+        | Operator("!=", _) -> 5.
+        | Operator("&", _) -> 6.
+        | Operator("^", _) -> 7.
+        | Operator("|", _) -> 8.
+        | Operator("&&", _) -> 9.
+        | Operator("||", _) -> 10.
+        | Operator("<|", _) -> 11.
+        | Operator("|>", _) -> 12.
+        | Operator("<<", _) -> 13.
+        | Operator(">>", _) -> 13.
+        | Operator(">>=", _) -> 14.
+        | Operator("::", _) -> 15.
+        | Operator(_) -> 16.
+        | _ -> failwith "only operators have precedence"
 
     // У операторов с одинаковым приоритетом обязана быть одинаковая ассоциативноть,
     // т.е. ассоциативность - функция от приоритета
@@ -145,18 +167,11 @@ tier0ExprRef.Value <-
 
 
     let formTree operators operands =
-        let levels =
-            SortedSet<_>(
-                operators
-                |> List.map (function
-                    | Operator(s) -> operatorPrecedence s)
-            )
+        let levels = SortedSet<_>(operators |> List.map operatorPrecedence)
 
         let folder (operators', operands') (precedence: float) =
             let newOperators =
-                operators'
-                |> List.filter (function
-                    | Operator(s) -> (operatorPrecedence s) <> precedence)
+                operators' |> List.filter (fun s -> (operatorPrecedence s) <> precedence)
 
             let assoc = associativity precedence
             let operatorsToTravers = if assoc = 1 then operators' else List.rev operators'
@@ -166,7 +181,7 @@ tier0ExprRef.Value <-
                 let rec combiner' ops' (opdZipper': Node * Node list) (acc: Node list) =
                     match ops' with
                     | [] -> (fst opdZipper') :: acc
-                    | Operator(op) :: restOp ->
+                    | op :: restOp ->
                         let (opd1, opd2 :: nextOpds) = opdZipper'
 
                         if operatorPrecedence op <> precedence then
@@ -174,9 +189,9 @@ tier0ExprRef.Value <-
                         else
                             let combined =
                                 if assoc = 1 then
-                                    Application(Application(Operator(op), opd1), opd2)
+                                    Application(Application(op, opd1), opd2)
                                 else
-                                    Application(Application(Operator(op), opd2), opd1)
+                                    Application(Application(op, opd2), opd1)
 
                             combiner' restOp (combined, nextOpds) acc
 
@@ -196,60 +211,82 @@ tier0ExprRef.Value <-
         match operators with
         | [] -> first
         | _ -> formTree operators operands
-    tier1Expr .>>. many ((attempt ws1 >>? operator .>> anyWs) .>>. tier1Expr) |>> mapper
+
+    tier1Expr .>>. many ((attempt ws1 >>? operator .>> anyWs) .>>. tier1Expr)
+    |>> mapper
 
 let expression = tier0Expr
 
 let equation allowOperator =
-    let allowedName = if allowOperator then plainName <|> prefixOperator else plainName
-    let lhs = (allowedName .>>. (anyWs1 >>. opt functionArgs) <|> (pattern true |>> fun x -> (x, None)))
-    pipe2
-        (keyword "let" >>. anyWs1 >>. lhs .>> anyWs)
-        (skipChar '=' >>. anyWs >>. expression) <|
-        fun (name, args) body ->
-            match args with
-            | None -> Equation(name, body)
-            | Some [] -> Equation(name, body)
-            | Some args' -> Equation(name, Function(args', body))
+    let allowedName =
+        if allowOperator then
+            plainName <|> operatorDef
+        else
+            plainName
+
+    let lhs =
+        (allowedName .>>. (anyWs1 >>. opt functionArgs)
+         <|> (pattern true |>> fun x -> (x, None)))
+
+    pipe2 (keyword "let" >>. anyWs1 >>. lhs .>> anyWs) (skipChar '=' >>. anyWs >>. expression)
+    <| fun (name, args) body ->
+        match args with
+        | None -> Equation(name, body)
+        | Some [] -> Equation(name, body)
+        | Some args' -> Equation(name, Function(args', body))
 
 let constructor =
-    pipe2
-        plainName <|
-        opt (anyWs >>? skipChar '(' >>. anyWs >>. commaSeparated plainName false false .>> anyWs .>> skipChar ')') <|
-        fun name args -> match args with
-                         | None -> Constructor(name, [])
-                         | Some args' -> Constructor(name, args')
+    pipe2 plainName
+    <| opt (
+        anyWs >>? skipChar '(' >>. anyWs >>. commaSeparated plainName false false
+        .>> anyWs
+        .>> skipChar ')'
+    )
+    <| fun name args ->
+        match args with
+        | None -> Constructor(name, [])
+        | Some args' -> Constructor(name, args')
 
 let typeMembers =
-    skipChar '{' >>. anyWs >>. multiline (equation true) false .>> anyWs .>> skipChar '}'
+    skipChar '{' >>. anyWs >>. multiline (equation true) false
+    .>> anyWs
+    .>> skipChar '}'
 
 let ptype =
     pipe3
         (keyword "type" >>. anyWs1 >>. plainName .>> anyWs)
         (skipChar ':' >>. anyWs >>. commaSeparated constructor false false .>> anyWs)
-        typeMembers <|
-        fun name cons members -> Type(name, cons, members)
+        typeMembers
+    <| fun name cons members -> Type(name, cons, members)
 
-let eval =
-    keyword "eval" >>. anyWs1 >>. expression |>> Eval
-        
-tier1StatementRef.Value <-
-    equation false <|> ptype <|> eval <|> expression
+let eval = keyword "eval" >>. anyWs1 >>. expression |>> Eval
+
+tier1StatementRef.Value <- equation false <|> ptype <|> eval <|> expression
 
 let entrypoint =
-    keyword "entrypoint" >>. anyWs >>. skipChar '=' >>. anyWs >>. expression |>> Entrypoint
+    keyword "entrypoint" >>. anyWs >>. skipChar '=' >>. anyWs >>. expression
+    |>> Entrypoint
 
 let import =
-    let source = stringLiteral |>> (function StringLiteral(s) -> s)
-    let targets = ((skipChar '*' >>% []) <|> commaSeparated namespacedName true false) .>> anyWs .>> keyword "from" .>> anyWs
-    
-    keyword "import" >>. anyWs >>. pipe2 (opt targets) source
-                                       (fun targets' source' -> match targets' with
-                                                                | None -> ImportNamespace source'
-                                                                | Some [] -> ImportAll source'
-                                                                | Some lst -> ImportFrom(source', lst))
- 
+    let source =
+        stringLiteral
+        |>> (function
+        | StringLiteral(s) -> s)
+
+    let targets =
+        ((skipChar '*' >>% []) <|> commaSeparated namespacedName true false)
+        .>> anyWs
+        .>> keyword "from"
+        .>> anyWs
+
+    keyword "import"
+    >>. anyWs
+    >>. pipe2 (opt targets) source (fun targets' source' ->
+        match targets' with
+        | None -> ImportNamespace source'
+        | Some [] -> ImportAll source'
+        | Some lst -> ImportFrom(source', lst))
+
 let statement = entrypoint <|> import <|> tier1Statement
 
 let program = anyWs >>. multiline statement true .>> anyWs .>> eof |>> Program
-
