@@ -22,7 +22,7 @@ type Node =
     | ListPattern of Node list
     | HeadTailPattern of Node * Node
     
-    | Case of Node * Node
+    | Case of Node * Node option * Node
     | Match of Node * Node list
     
     | Function of Node list * Node

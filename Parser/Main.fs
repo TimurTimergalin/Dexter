@@ -62,8 +62,10 @@ let conditional: DexterParser<_> =
         (fun x y z -> Conditional(x, y, z))
 
 let case =
-    (keyword "case" >>. anyWs >>. pattern false)
-    .>>. (anyWs >>. skipString "->" >>. anyWs >>. tier0Expr)
+    tuple3
+        (keyword "case" >>. anyWs >>. pattern false .>> anyWs)
+        (opt <| (keyword "when" >>. anyWs >>. tier0Expr .>> anyWs))
+        (skipString "->" >>. anyWs >>. tier0Expr)
     |>> Case
 
 let tier1'5Expr = conditional <|> application

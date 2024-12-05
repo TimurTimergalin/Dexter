@@ -26,6 +26,7 @@ let reservedKeywordsList = [
     "eval"
     "import"
     "from"
+    "when"
 ]
 
 let keyword name = attempt <| (skipString name .>> (notFollowedByL <| satisfy allowedNameChar <| "unknown keyword"))
