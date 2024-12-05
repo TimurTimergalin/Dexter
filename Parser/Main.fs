@@ -38,8 +38,6 @@ let tier3Expr =
           compound ]
 
 let tier2Expr =
-    let unaryOperators = "+-~!"
-
     pipe2 unaryOperator tier3Expr (fun op node -> Application(op, node))
     <|> tier3Expr
 
@@ -58,20 +56,20 @@ let application =
 
 let conditional: DexterParser<_> =
     pipe3
-        (keyword "if" >>? ws1 >>. tier0Expr .>> anyWs1)
-        (skipString "then" >>. ws1 >>. tier0Expr .>> anyWs1)
-        (skipString "else" >>. ws1 >>. tier0Expr)
+        (keyword "if" >>? ws >>. tier0Expr .>> anyWs)
+        (keyword "then" >>. ws >>. tier0Expr .>> anyWs)
+        (keyword "else" >>. ws >>. tier0Expr)
         (fun x y z -> Conditional(x, y, z))
 
 let case =
-    (skipString "case" >>. anyWs1 >>. pattern false)
+    (keyword "case" >>. anyWs >>. pattern false)
     .>>. (anyWs >>. skipString "->" >>. anyWs >>. tier0Expr)
     |>> Case
 
 let tier1'5Expr = conditional <|> application
 
 let pmatch =
-    (keyword "match" >>. anyWs1 >>. tier1'5Expr .>> anyWs)
+    (keyword "match" >>. anyWs >>. tier1'5Expr .>> anyWs)
     .>>. (skipChar '{' >>. anyWs >>. multiline1 case false .>> anyWs .>> skipChar '}')
     |>> Match
 
@@ -81,14 +79,14 @@ let functionArgs =
     pipe2 arg (many (ws1 >>? arg)) <| fun first rest -> first :: rest
 
 let pfunc =
-    (skipString "fun" >>. anyWs1 >>. functionArgs .>> anyWs)
+    (keyword "fun" >>. anyWs >>. functionArgs .>> anyWs)
     .>>. (skipString "->" >>. anyWs >>. tier0Expr)
     |>> Function
 
 let monadBind =
     pipe2
         (keyword "do"
-         >>. anyWs1
+         >>. anyWs
          >>. opt (pattern true .>>? ws .>>? skipString "<-" .>> anyWs))
         tier0Expr
     <| fun bind body ->
@@ -228,7 +226,7 @@ let equation allowOperator =
         (allowedName .>>. (anyWs1 >>. opt functionArgs)
          <|> (pattern true |>> fun x -> (x, None)))
 
-    pipe2 (keyword "let" >>. anyWs1 >>. lhs .>> anyWs) (skipChar '=' >>. anyWs >>. expression)
+    pipe2 (keyword "let" >>. anyWs >>. lhs .>> anyWs) (skipChar '=' >>. anyWs >>. expression)
     <| fun (name, args) body ->
         match args with
         | None -> Equation(name, body)
@@ -259,7 +257,7 @@ let ptype =
         typeMembers
     <| fun name cons members -> Type(name, cons, members)
 
-let eval = keyword "eval" >>. anyWs1 >>. expression |>> Eval
+let eval = keyword "eval" >>. anyWs >>. expression |>> Eval
 
 tier1StatementRef.Value <- equation false <|> ptype <|> eval <|> expression
 

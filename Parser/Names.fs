@@ -28,7 +28,7 @@ let reservedKeywordsList = [
     "from"
 ]
 
-let keyword name = attempt <| skipString name
+let keyword name = attempt <| (skipString name .>> (notFollowedByL <| satisfy allowedNameChar <| "unknown keyword"))
 
 let reservedKeyword: DexterParser<_> =
     reservedKeywordsList |> List.map keyword |> choice .>> notFollowedBy (skipSatisfy allowedNameChar)

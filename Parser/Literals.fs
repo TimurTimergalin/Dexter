@@ -31,10 +31,10 @@ let numberFormat = NumberLiteralOptions.AllowBinary |||
                                      NumberLiteralOptions.AllowMinusSign |||
                                      NumberLiteralOptions.AllowPlusSign
 
-let numericalLiteral: DexterParser<_> = numberLiteral numberFormat "number" |>>
+let numericalLiteral: DexterParser<_> = (numberLiteral numberFormat "number" |>>
                                         fun x ->
                                             if x.IsInteger then IntLiteral(int x.String)
-                                            else FloatLiteral(float x.String)
-                                    
+                                            else FloatLiteral(float x.String)) .>> notFollowedByL (satisfy System.Char.IsLetter) "letter"
+                                     
                    
                                      
