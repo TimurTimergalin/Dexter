@@ -19,4 +19,4 @@ and Context = Dictionary<string, ContextEntry>
 and ContextEntry =
     | Val of Value
     | Namespace of Context
-and ContextStack = List<Context>
+and ContextStack = Context list

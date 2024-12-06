@@ -1,5 +1,6 @@
 ﻿module Interpreter.Main
 
+open System
 open System.Collections.Generic
 open Interpreter.BuiltinRefs
 open Interpreter.ContextStack
@@ -22,6 +23,7 @@ let rec recognizable =
     function
     | Unrecognizable _ -> false
     | Closure _ -> false
+    | Constructor _ -> false
     | Ref(name, ctx) ->
         let (Val value) = ctx[name]
         recognizable value
@@ -35,11 +37,10 @@ let constructorToObject (Constructor(_, argsCount, _) as cons) =
         | cur::rest -> Value.Function <| fun _ v ->
             let ctx = withSet (Dictionary()) cur (Val v)
             let ref' = Ref(cur, ctx)
-            Closure(construct (ref'::vars) rest, withAdded (List()) ctx)
+            Closure(construct (ref'::vars) rest, [ctx])
     
     let vars = seq { for i in 1..argsCount -> $"a%d{i}" } |> Seq.toList
     construct [] vars
-        
 
 // Эта функция будет применять некоторые редукции к выражениям.
 // Данная функция пытается посчитать как можно меньше - за счет этого достигается ленивость.
@@ -51,28 +52,29 @@ let rec eval1 (stack: ContextStack) (value: Value) : Value =
         | StringLiteral s -> String s
         | IntLiteral i -> Int i
         | FloatLiteral f -> Float f
-        | NamespacedName _ as nsName ->
-            let (Ref(name, ctx) as ref') = getRef stack nsName
-            match ctx[name] with
-            | Val(Constructor _ as cons) -> constructorToObject cons
-            | _ -> ref'
+        | NamespacedName _ as nsName -> getRef stack nsName
+        | Application(f, arg) ->
+            let evf = evalUntilRecognizable stack (Unrecognizable f)
+            match evf with
+            | Value.Function f' -> f' stack (Unrecognizable arg)
+            | _ -> raise notCallableError
             
         | _ -> failwith "Not implemented"
     | Closure(value', stack') ->
-        let result = withExtended stack stack' <| fun st -> eval1 st value'
-
-        match result with
-        | Closure(value'', stack'') -> Closure(value'', concatenated stack'' stack')
-        | Object(cons, args) -> Object(cons, FSharp.Collections.List.map (fun x -> Closure(x, stack')) args)
-        | Value.Function f ->
-            let newF stack'' = withExtended stack'' stack' f
-            Value.Function newF
-        | x when recognizable x -> x
-        | x -> Closure(x, stack')
+        match value' with
+        | Closure(value'', stack'') -> Closure(value'', List.concat [stack''; stack'])
+        | Object(cons, args) -> Object(cons, List.map (fun v -> Closure(v, stack')) args)
+        | Value.Function f -> Value.Function <| fun st v -> Closure(f st v, stack')
+        | x when not (recognizable x) -> Closure(eval1 stack' x, stack')
+        | x -> x
+    | Ref(name, ctx) ->
+        let (Val value) = ctx[name]
+        Ref(name, withSet ctx name (eval1 stack value |> Val))
     | Action f -> f ()
+    | Constructor _ as cons -> constructorToObject cons
     | x -> x
 
-and evalUntilRecognizable (stack: ContextStack) value =
+and evalUntilRecognizable (stack: ContextStack) (value: Value) =
     if recognizable value then
         value
     else

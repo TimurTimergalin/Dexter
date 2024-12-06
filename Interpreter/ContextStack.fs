@@ -16,12 +16,11 @@ let lastName name =
 
 let fullName = function NamespacedName(ns, name) -> (String.concat "." ns) + lastName name
                 
-
 let rec getRef (stack: ContextStack) (NamespacedName(ns, name) as nsName) =
     let fn = fullName nsName
     match stack with
-    | Empty -> raise (nameError fn)                                
-    | Has(head, tail) ->
+    | [] -> raise (nameError fn)                                
+    | head::tail ->
         if not (head.ContainsKey(List.head ns)) then
             getRef tail nsName
         else
