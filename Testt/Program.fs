@@ -7,7 +7,7 @@ open Parser.Main
 [<EntryPoint>]
 let main argv =
     let parser = program
-    let toParse = "let x  a (g::h::[]) (z) (w) (q) = 2"
+    let toParse = "let x = match a {case b.c -> None }"
     
     match run parser toParse with
     | Success(node, _, _) -> printf $"S:{node}"

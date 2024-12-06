@@ -232,7 +232,7 @@ let equation allowOperator =
             plainName
 
     let lhs =
-        (allowedName .>>. (anyWs1 >>. opt functionArgs)
+        ((allowedName .>>? notFollowedBy (skipChar '.')) .>>. (anyWs1 >>. opt functionArgs)
          <|> (pattern true |>> fun x -> (x, None)))
 
     pipe2 (keyword "let" >>. anyWs >>. lhs .>> anyWs) (skipChar '=' >>. anyWs >>. expression)

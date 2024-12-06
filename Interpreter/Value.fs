@@ -8,12 +8,13 @@ type Value =
     | Int of int
     | String of string
     | Function of (ContextStack -> Value -> Value)
-    | Action of (unit -> unit)
+    | Action of (unit -> Value)
     | Constructor of string * int * Value
     | Type of string * Context
     | Object of Value * Value list
     | Ref of string * Context
     | Unrecognizable of Node
+    | Closure of Value * ContextStack
 and Context = Dictionary<string, ContextEntry>
 and ContextEntry =
     | Val of Value

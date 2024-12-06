@@ -1,5 +1,6 @@
 ﻿module Interpreter.ContextStack
 
+open FParsec
 open Interpreter.Exceptions
 open Interpreter.Imperative
 open Interpreter.Value
@@ -36,5 +37,11 @@ let rec getRef (stack: ContextStack) (NamespacedName(ns, name) as nsName) =
                 raise (nameError fn)
             match finalCtx[ln] with
             | Namespace _ -> raise (nameError fn)
-            | x -> Ref(ln, finalCtx)
+            | _ -> Ref(ln, finalCtx)
+
+let getRefSafe stack nsName =
+    try
+        Result.Ok(getRef stack nsName)
+    with :? NameError ->
+        Result.Error()
                             
