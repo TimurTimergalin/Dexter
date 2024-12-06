@@ -1,6 +1,7 @@
 ﻿module Interpreter.Value
 
 open System.Collections.Generic
+open Parser
 open Parser.Ast
 
 type Value =
@@ -11,8 +12,8 @@ type Value =
     | Action of (unit -> Value)
     | Constructor of string * int * Value
     | Type of string * Context
-    | Object of Value * Value list
-    | Ref of string * Context
+    | Object of Value * List<Value>
+    | Ref of Context * (Context -> Value) * (Context -> Value -> Context)
     | Unrecognizable of Node
     | Closure of Value * ContextStack
 and Context = Dictionary<string, ContextEntry>

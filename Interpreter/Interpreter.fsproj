@@ -8,7 +8,7 @@
         <Compile Include="Exceptions.fs" />
         <Compile Include="Imperative.fs" />
         <Compile Include="Value.fs" />
-        <Compile Include="ContextStack.fs" />
+        <Compile Include="RefUtil.fs" />
         <Compile Include="BuiltinRefs.fs" />
         <Compile Include="Types.fs" />
         <Compile Include="Main.fs" />

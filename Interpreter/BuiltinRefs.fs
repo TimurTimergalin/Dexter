@@ -1,5 +1,6 @@
 ﻿module Interpreter.BuiltinRefs
 
+open System.Collections.Generic
 open Interpreter.Value
 
 // Все ниже проделанные махинации - не императивщина.
@@ -19,6 +20,6 @@ let nodeRef = ref (Action <| fun () -> failwith "not init")
 let endRef = ref (Action <| fun () -> failwith "not init")
 let listRef = ref (Action <| fun () -> failwith "not init")
 
-let true'() = Object(trueRef.Value, [])
-let false'() = Object(falseRef.Value, [])
-let none'() = Object(noneRef.Value, [])
+let true'() = Object(trueRef.Value, List())
+let false'() = Object(falseRef.Value, List())
+let none'() = Object(noneRef.Value, List())

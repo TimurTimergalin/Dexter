@@ -1,9 +1,8 @@
 ﻿module Interpreter.Main
 
-open System
 open System.Collections.Generic
 open Interpreter.BuiltinRefs
-open Interpreter.ContextStack
+open Interpreter.RefUtil
 open Interpreter.Exceptions
 open Interpreter.Imperative
 open Interpreter.Value
@@ -12,8 +11,6 @@ open Parser.Ast
 let typeEq (Type(_, ns1)) (Type(_, ns2)) = ns1 = ns2
 
 let objIsInst type' obj =
-    let (Type(name, members)) = type'
-
     match obj with
     | Object(Constructor(_, _, type''), _) when typeEq type' type'' -> true' ()
     | _ -> false' ()
@@ -23,24 +20,23 @@ let rec recognizable =
     function
     | Unrecognizable _ -> false
     | Closure _ -> false
-    | Constructor _ -> false
-    | Ref(name, ctx) ->
-        let (Val value) = ctx[name]
-        recognizable value
+    | Ref(ctx, getter, _) -> recognizable (getter ctx)
     | Action _ -> false
-    | _ -> true        
+    | _ -> true
 
 let constructorToObject (Constructor(_, argsCount, _) as cons) =
     let rec construct vars varsRem =
         match varsRem with
-        | [] -> Object(cons, List.rev vars)
-        | cur::rest -> Value.Function <| fun _ v ->
-            let ctx = withSet (Dictionary()) cur (Val v)
-            let ref' = Ref(cur, ctx)
-            Closure(construct (ref'::vars) rest, [ctx])
-    
+        | [] -> Object(cons, reversed vars)
+        | cur :: rest ->
+            Value.Function
+            <| fun _ v ->
+                let ctx = withSet (Dictionary()) cur (Val v)
+                let ref' = Ref(ctx, topLevelGetter cur, topLevelSetter cur)
+                Closure(construct (withAdded vars ref') rest, [ ctx ])
+
     let vars = seq { for i in 1..argsCount -> $"a%d{i}" } |> Seq.toList
-    construct [] vars
+    construct (List()) vars
 
 // Эта функция будет применять некоторые редукции к выражениям.
 // Данная функция пытается посчитать как можно меньше - за счет этого достигается ленивость.
@@ -54,24 +50,24 @@ let rec eval1 (stack: ContextStack) (value: Value) : Value =
         | FloatLiteral f -> Float f
         | NamespacedName _ as nsName -> getRef stack nsName
         | Application(f, arg) ->
-            let evf = evalUntilRecognizable stack (Unrecognizable f)
+            let evf = dereference stack (Unrecognizable f)
+
             match evf with
             | Value.Function f' -> f' stack (Unrecognizable arg)
             | _ -> raise notCallableError
-            
+
         | _ -> failwith "Not implemented"
     | Closure(value', stack') ->
         match value' with
-        | Closure(value'', stack'') -> Closure(value'', List.concat [stack''; stack'])
-        | Object(cons, args) -> Object(cons, List.map (fun v -> Closure(v, stack')) args)
+        | Closure(value'', stack'') -> Closure(value'', List.concat [ stack''; stack' ])
+        | Object(cons, args) -> Object(cons, map (fun v -> Closure(v, stack')) args)
         | Value.Function f -> Value.Function <| fun st v -> Closure(f st v, stack')
         | x when not (recognizable x) -> Closure(eval1 stack' x, stack')
         | x -> x
-    | Ref(name, ctx) ->
-        let (Val value) = ctx[name]
-        Ref(name, withSet ctx name (eval1 stack value |> Val))
+    | Ref(ctx, getter, setter) ->
+        let ctx' = setter ctx (eval1 stack (getter ctx))
+        Ref(ctx', getter, setter)
     | Action f -> f ()
-    | Constructor _ as cons -> constructorToObject cons
     | x -> x
 
 and evalUntilRecognizable (stack: ContextStack) (value: Value) =
@@ -80,8 +76,28 @@ and evalUntilRecognizable (stack: ContextStack) (value: Value) =
     else
         evalUntilRecognizable stack (eval1 stack value)
 
-and satisfiesConstructor (stack: ContextStack) (Constructor(name, _, type')) (value: Value) : bool =
+and dereference stack value =
     let evaluated = evalUntilRecognizable stack value
+
+    match evaluated with
+    | Ref(ctx, getter, setter) ->
+        match getter ctx with
+        | Object(cons, args) ->
+            let objSetter i value' = Object(cons, withUpdated args i value')
+
+            Object(
+                cons,
+                args
+                |> mapi (fun i _ ->
+                    Ref(ctx, (fun _ -> args[i]), (fun ctx' value' -> setter ctx' (objSetter i value'))))
+            )
+        | Ref _ as inner -> dereference stack inner
+        | Constructor _ as cons -> constructorToObject cons
+        | x -> x
+    | _ -> evaluated
+
+and satisfiesConstructor (stack: ContextStack) (Constructor(name, _, type')) (value: Value) : bool =
+    let evaluated = dereference stack value
 
     match evaluated with
     | Object(Constructor(name', _, type''), _) when name = name' && typeEq type' type'' -> true
@@ -124,9 +140,9 @@ and compilePattern (stack: ContextStack) (node: Node) (value: Value) : Context o
         let ref' = getRefSafe stack nsName
 
         match ref' with
-        | Ok(Ref(name, ctx)) ->
-            match ctx[name] with
-            | Val(Constructor(cn, argsCount, Type(tn, _)) as cons) ->
+        | Ok(Ref(ctx, getter, _)) ->
+            match getter ctx with
+            | Constructor(cn, argsCount, Type(tn, _)) as cons ->
                 if argsCount <> 0 then
                     raise (constructorError cn tn argsCount 0)
 
@@ -141,13 +157,12 @@ and compilePattern (stack: ContextStack) (node: Node) (value: Value) : Context o
             let (NamespacedName(_, Identifier(name'))) = nsName
             Some(withSet (Dictionary()) name' (Val value))
     | ConstructorPattern(nsName, args) ->
-        let (Ref(name, ctx)) = getRef stack nsName
+        let (Ref(ctx, getter, _)) = getRef stack nsName
 
-        match ctx[name] with
-        | Val(Constructor _ as cons) ->
-            compileConstructor stack cons args value
+        match getter ctx with
+        | Constructor _ as cons -> compileConstructor stack cons args value
     | LiteralPattern literal ->
-        let evaluated = evalUntilRecognizable stack value
+        let evaluated = dereference stack value
 
         match literal with
         | StringLiteral s ->
@@ -168,31 +183,27 @@ and compilePattern (stack: ContextStack) (node: Node) (value: Value) : Context o
     | ListPattern nodes ->
         match nodes with
         | [] ->
-            let evaluated = evalUntilRecognizable stack value
+            let evaluated = dereference stack value
 
             match evaluated with
             | Object(Constructor("Empty", 0, type'), _) when typeEq type' listRef.Value -> Some(Dictionary())
             | _ -> None
-        | head :: tail -> compileConstructor stack nodeRef.Value [head; ListPattern tail] value
-    | HeadTailPattern(head, tail) ->
-        compileConstructor stack nodeRef.Value [head; tail] value
+        | head :: tail -> compileConstructor stack nodeRef.Value [ head; ListPattern tail ] value
+    | HeadTailPattern(head, tail) -> compileConstructor stack nodeRef.Value [ head; tail ] value
     | _ -> failwith "Trying to compile not-a-pattern"
 
 let rec evalAll (stack: ContextStack) =
     function
     | Object(Constructor(name, argsCount, Type(tn, _)) as cons, args) ->
-        let givenArgsCount = List.length args
+        let givenArgsCount = args.Count
 
         if givenArgsCount <> argsCount then
             raise (constructorError name tn argsCount givenArgsCount)
 
-        let newArgs = List.map (evalAll stack) args
+        let newArgs = map (evalAll stack) args
         Object(cons, newArgs)
-    | Ref(key, ctx) ->
-        let (Val value) = ctx[key]
-        // Использование withSet формально порождает побочные эффекты,
-        // но логическая константность словаря ctx не нарушена - по ключу лежит то же значение, что и раньше,
-        // только вычисленное
-        Ref(key, withSet ctx key (Val(evalAll stack value)))
+    | Ref(ctx, getter, setter) ->
+        let ctx' = setter ctx (evalAll stack (getter ctx))
+        Ref(ctx', getter, setter)
     | Unrecognizable _ as nn -> evalAll stack (evalUntilRecognizable stack nn)
     | x -> x
