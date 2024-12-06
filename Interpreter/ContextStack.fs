@@ -6,8 +6,6 @@ open Interpreter.Value
 open Microsoft.FSharp.Collections
 open Parser.Ast
 
-type ContextStack = System.Collections.Generic.List<Context>
-
 let lastName name =
     match name with
             | Identifier s -> s

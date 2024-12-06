@@ -1,11 +1,19 @@
 ﻿module Interpreter.Main
 
+open Interpreter.BuiltinRefs
 open Interpreter.ContextStack
 open Interpreter.Exceptions
 open Interpreter.Imperative
 open Interpreter.Value
 open Parser.Ast
 
+let objIsInst type' obj =
+    let (Type(name, members)) = type'
+    match obj with
+    | Object(Constructor(_, _, Type(name', members')), _) when name = name' && members = members' -> true'()
+    | _ -> false'()
+
+// Выражение будем называть узнаваемым, если у него можно определить тип, не применяя редукций
 let rec recognizable = function
     | Unrecognizable _ -> false
     | Ref(name, ctx) ->
@@ -15,7 +23,7 @@ let rec recognizable = function
 
 // Эта функция будет применять некоторые редукции к выражениям.
 // Данная функция пытается посчитать как можно меньше - за счет этого достигается ленивость.
-// Результат функции не обязательно будет 
+// Результат функции не обязательно будет "узнаваемым"
 let rec eval1 (stack: ContextStack) (value: Value): Value =
     match value with
     | Unrecognizable node ->
@@ -49,5 +57,3 @@ let rec evalAll (stack: ContextStack) = function
         Ref(key, withSet ctx key (Val(evalAll stack value)))
     | Unrecognizable _ as nn -> evalAll stack (evalUntilRecognizable stack nn)
     | x -> x
-
-

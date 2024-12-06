@@ -9,8 +9,10 @@
         <Compile Include="Imperative.fs" />
         <Compile Include="Value.fs" />
         <Compile Include="ContextStack.fs" />
+        <Compile Include="BuiltinRefs.fs" />
         <Compile Include="Types.fs" />
         <Compile Include="Main.fs" />
+        <Compile Include="Builtins.fs" />
     </ItemGroup>
 
     <ItemGroup>
