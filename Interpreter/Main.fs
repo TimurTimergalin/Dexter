@@ -26,7 +26,20 @@ let rec recognizable =
         let (Val value) = ctx[name]
         recognizable value
     | Action _ -> false
-    | _ -> true
+    | _ -> true        
+
+let constructorToObject (Constructor(_, argsCount, _) as cons) =
+    let rec construct vars varsRem =
+        match varsRem with
+        | [] -> Object(cons, List.rev vars)
+        | cur::rest -> Value.Function <| fun _ v ->
+            let ctx = withSet (Dictionary()) cur (Val v)
+            let ref' = Ref(cur, ctx)
+            Closure(construct (ref'::vars) rest, withAdded (List()) ctx)
+    
+    let vars = seq { for i in 1..argsCount -> $"a%d{i}" } |> Seq.toList
+    construct [] vars
+        
 
 // Эта функция будет применять некоторые редукции к выражениям.
 // Данная функция пытается посчитать как можно меньше - за счет этого достигается ленивость.
@@ -38,7 +51,12 @@ let rec eval1 (stack: ContextStack) (value: Value) : Value =
         | StringLiteral s -> String s
         | IntLiteral i -> Int i
         | FloatLiteral f -> Float f
-        | NamespacedName _ as nsName -> getRef stack nsName
+        | NamespacedName _ as nsName ->
+            let (Ref(name, ctx) as ref') = getRef stack nsName
+            match ctx[name] with
+            | Val(Constructor _ as cons) -> constructorToObject cons
+            | _ -> ref'
+            
         | _ -> failwith "Not implemented"
     | Closure(value', stack') ->
         let result = withExtended stack stack' <| fun st -> eval1 st value'
