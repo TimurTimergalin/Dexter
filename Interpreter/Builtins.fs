@@ -12,7 +12,7 @@ let noneCons = Constructor("None", 0, noneType)
 let isNone stack v =
     let evaluated = dereference stack v
     objIsInst noneType evaluated
-noneTypeMembers.Add("inst", Val (Function isNone))
+noneTypeMembers.Add("inst", Val (Function(isNone, false)))
 
 let boolMembers: Context = Dictionary()
 let boolType = Type("Bool", boolMembers) 
@@ -21,7 +21,7 @@ let falseCons = Constructor("False", 0, boolType)
 let isBool stack (v: Value) =
     let evaluated = dereference stack v
     objIsInst boolType evaluated
-boolMembers.Add("inst", Val (Function isBool))
+boolMembers.Add("inst", Val (Function(isBool, false)))
 
 let listMembers: Context = Dictionary()
 let listType = Type("List", listMembers)
@@ -30,7 +30,7 @@ let endCons = Constructor("End", 0, listType)
 let isList stack v =
     let evaluated = dereference stack v
     objIsInst listType evaluated
-listMembers.Add("inst", Val (Function isList))
+listMembers.Add("inst", Val (Function(isList, false)))
     
 
 let builtins: Context =

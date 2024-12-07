@@ -29,11 +29,13 @@ let constructorToObject (Constructor(_, argsCount, _) as cons) =
         match varsRem with
         | [] -> Object(cons, reversed vars)
         | cur :: rest ->
-            Value.Function
-            <| fun _ v ->
-                let ctx = withSet (Dictionary()) cur (Val v)
-                let ref' = Ref(ctx, topLevelGetter cur, topLevelSetter cur)
-                Closure(construct (withAdded vars ref') rest, [ ctx ])
+            Value.Function(
+                (fun _ v ->
+                    let ctx = withSet (Dictionary()) cur (Val v)
+                    let ref' = Ref(ctx, topLevelGetter cur, topLevelSetter cur)
+                    Closure(construct (withAdded vars ref') rest, [ ctx ], false)),
+                false
+            )
 
     let vars = seq { for i in 1..argsCount -> $"a%d{i}" } |> Seq.toList
     construct (List()) vars
@@ -53,16 +55,17 @@ let rec eval1 (stack: ContextStack) (value: Value) : Value =
             let evf = dereference stack (Unrecognizable f)
 
             match evf with
-            | Value.Function f' -> f' stack (Unrecognizable arg)
+            | Value.Function(f', _) -> f' stack (Unrecognizable arg)
             | _ -> raise notCallableError
 
         | _ -> failwith "Not implemented"
-    | Closure(value', stack') ->
+    | Closure(value', stack', isolated) ->
         match value' with
-        | Closure(value'', stack'') -> Closure(value'', List.concat [ stack''; stack' ])
-        | Object(cons, args) -> Object(cons, map (fun v -> Closure(v, stack')) args)
-        | Value.Function f -> Value.Function <| fun st v -> Closure(f st v, stack')
-        | x when not (recognizable x) -> Closure(eval1 stack' x, stack')
+        | Closure(value'', stack'', false) -> Closure(value'', List.concat [ stack''; stack' ], isolated)
+        | Object(cons, args) -> Object(cons, map (fun v -> Closure(v, stack', isolated)) args)
+        | Value.Function(f, true) -> Value.Function((fun st v -> f st (Closure(v, stack', isolated))), true)
+        | Value.Function(f, false) -> Value.Function((fun st v -> Closure(f st v, stack', isolated)), false)
+        | x when not (recognizable x) -> Closure(eval1 stack' x, stack', isolated)
         | x -> x
     | Ref(ctx, getter, setter) ->
         let ctx' = setter ctx (eval1 stack (getter ctx))
@@ -88,11 +91,12 @@ and dereference stack value =
             Object(
                 cons,
                 args
-                |> mapi (fun i _ ->
-                    Ref(ctx, (fun _ -> args[i]), (fun ctx' value' -> setter ctx' (objSetter i value'))))
+                |> mapi (fun i _ -> Ref(ctx, (fun _ -> args[i]), (fun ctx' value' -> setter ctx' (objSetter i value'))))
             )
         | Ref _ as inner -> dereference stack inner
         | Constructor _ as cons -> constructorToObject cons
+        | Value.Function(f, _) -> Value.Function(f, true)
+        | Closure(v, st, _) -> Closure(v, st, true)
         | x -> x
     | _ -> evaluated
 
