@@ -1,15 +1,12 @@
 ﻿module Interpreter.Builtins.BuiltinRefs
 
-open System
 open System.Collections.Generic
 open Interpreter.Imperative
 open Interpreter.Value
 
-// Все ниже проделанные махинации - не императивщина.
-// Все это нужно лишь для того, чтобы позволить модулям Builtins и Main ссылаться друг на друга.
+// Все махинации ниже нужны лишь для того, чтобы позволить модулям Builtins и Main ссылаться друг на друга.
 // Это необходимо, так как файлы в F# компилируются строго в определенном порядке.
 // Можно сказать, что BuiltinRefs - "заголовочный файл" для модуля Builtins.
-// Отметим, что объединение в один файл все равно бы не помогло - в таком случае эти "Заголовки" пришлось бы вставить и туда 
 
 let noneRef = ref (Action <| fun () -> failwith "not init")
 let noneTypeRef = ref (Action <| fun () -> failwith "not init")
@@ -32,10 +29,17 @@ let extractConstructor (Ref(ctx, getter, _)) =
     | Constructor _ as cons -> cons
     | _ -> failwith "Not a constructor"
 
-let true'() = Object(extractConstructor trueRef.Value, List())
-let false'() = Object(extractConstructor falseRef.Value, List())
-let none'() = Object(extractConstructor noneRef.Value, List())
-let end'() = Object(extractConstructor endRef.Value, List())
-let node' head tail = Object(extractConstructor nodeRef.Value,
-                                withAdded (withAdded (List()) head) tail
-                             )
+let true' () =
+    Object(extractConstructor trueRef.Value, List())
+
+let false' () =
+    Object(extractConstructor falseRef.Value, List())
+
+let none' () =
+    Object(extractConstructor noneRef.Value, List())
+
+let end' () =
+    Object(extractConstructor endRef.Value, List())
+
+let node' head tail =
+    Object(extractConstructor nodeRef.Value, withAdded (withAdded (List()) head) tail)

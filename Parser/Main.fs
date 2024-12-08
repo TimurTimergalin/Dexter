@@ -10,7 +10,6 @@ open Parser.Multiline
 open Parser.Names
 open Parser.Patterns
 open Parser.Spaces
-open Parser.debug
 
 let tier0Expr, tier0ExprRef = createParserForwardedToRef<Node, ParserContext> ()
 
@@ -83,14 +82,11 @@ let functionArgs =
 let rec carry args body =
     match args with
     | [] -> failwith "Met function with no args during parsing"
-    | [last] -> Function(last, body)
-    | first::rest -> Function(first, carry rest body)
+    | [ last ] -> Function(last, body)
+    | first :: rest -> Function(first, carry rest body)
 
 let pfunc =
-    pipe2
-        (keyword "fun" >>. anyWs >>. functionArgs .>> anyWs)
-        (skipString "->" >>. anyWs >>. tier0Expr)
-        carry
+    pipe2 (keyword "fun" >>. anyWs >>. functionArgs .>> anyWs) (skipString "->" >>. anyWs >>. tier0Expr) carry
 
 let monadBind =
     pipe2
@@ -219,8 +215,7 @@ tier0ExprRef.Value <-
         | [] -> first
         | _ -> formTree operators operands
 
-    tier1Expr .>>. many ((ws >>? operator .>> anyWs) .>>. tier1Expr)
-    |>> mapper
+    tier1Expr .>>. many ((ws >>? operator .>> anyWs) .>>. tier1Expr) |>> mapper
 
 let expression = tier0Expr
 
@@ -232,7 +227,8 @@ let equation allowOperator =
             plainName
 
     let lhs =
-        ((allowedName .>>? notFollowedBy (skipChar '.')) .>>. (anyWs1 >>. opt functionArgs)
+        ((allowedName .>>? notFollowedBy (skipChar '.') |>> NameBind)
+         .>>. (anyWs1 >>. opt functionArgs)
          <|> (pattern true |>> fun x -> (x, None)))
 
     pipe2 (keyword "let" >>. anyWs >>. lhs .>> anyWs) (skipChar '=' >>. anyWs >>. expression)
@@ -279,22 +275,17 @@ let import =
         stringLiteral
         |>> (function
         | StringLiteral(s) -> s)
-    
+
     let alias = ws >>? keyword "as" >>. anyWs >>. plainName
 
-    let targets =
-        ((skipChar '*' >>% []) <|> commaSeparated namespacedName true false)
-        .>> anyWs
-        .>> keyword "from"
-        .>> anyWs
+    let targets = (skipChar '*') .>> anyWs .>> keyword "from" .>> anyWs
 
     keyword "import"
     >>. anyWs
     >>. pipe3 (opt targets) source (opt alias) (fun targets' source' alias' ->
         match targets' with
-        | None -> ImportNamespace (source', alias')
-        | Some [] -> ImportAll (source', alias')
-        | Some lst -> ImportFrom(source', lst, alias'))
+        | None -> ImportNamespace(source', alias')
+        | Some _ -> ImportAll(source', alias'))
 
 let statement = entrypoint <|> import <|> tier1Statement
 

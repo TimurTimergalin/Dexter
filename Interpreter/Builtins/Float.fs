@@ -2,7 +2,7 @@
 
 open System.Collections.Generic
 open Interpreter.Builtins.BuiltinRefs
-open Interpreter.Main
+open Interpreter.Evaluate
 open Interpreter.Value
 
 let floatMembers: Context = Dictionary()

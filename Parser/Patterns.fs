@@ -7,7 +7,6 @@ open Parser.Lists
 open Parser.Literals
 open Parser.Names
 open Parser.Spaces
-open Parser.debug
 
 let tier0Pattern, tier0PatternRef =
     createParserForwardedToRef<Node, ParserContext> ()

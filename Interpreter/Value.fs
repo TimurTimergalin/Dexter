@@ -1,7 +1,6 @@
 ﻿module Interpreter.Value
 
 open System.Collections.Generic
-open Parser
 open Parser.Ast
 
 type Value =
@@ -17,8 +16,11 @@ type Value =
     | Unrecognizable of Node
     | Closure of Value * ContextStack * bool
     | Application of Value * Value
+
 and Context = Dictionary<string, ContextEntry>
+
 and ContextEntry =
     | Val of Value
     | Namespace of Context
+
 and ContextStack = Context list

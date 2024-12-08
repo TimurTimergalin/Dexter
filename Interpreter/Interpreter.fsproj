@@ -5,26 +5,27 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="Exceptions.fs" />
-        <Compile Include="Imperative.fs" />
-        <Compile Include="Value.fs" />
-        <Compile Include="RefUtil.fs" />
-        <Compile Include="Builtins\BuiltinRefs.fs" />
-        <Compile Include="Types.fs" />
-        <Compile Include="Main.fs" />
-        <Compile Include="Builtins\NoneType.fs" />
-        <Compile Include="Builtins\Bool.fs" />
-        <Compile Include="Builtins\List.fs" />
-        <Compile Include="Builtins\Int.fs" />
-        <Compile Include="Builtins\Float.fs" />
-        <Compile Include="Builtins\String.fs" />
-        <Compile Include="Builtins\Function.fs" />
-        <Compile Include="Builtins\BuiltinFunctions.fs" />
-        <Compile Include="Builtins\Builtins.fs" />
+        <Compile Include="Exceptions.fs"/>
+        <Compile Include="Imperative.fs"/>
+        <Compile Include="Value.fs"/>
+        <Compile Include="RefUtil.fs"/>
+        <Compile Include="Builtins\BuiltinRefs.fs"/>
+        <Compile Include="Types.fs"/>
+        <Compile Include="Evaluate.fs"/>
+        <Compile Include="Builtins\NoneType.fs"/>
+        <Compile Include="Builtins\Bool.fs"/>
+        <Compile Include="Builtins\List.fs"/>
+        <Compile Include="Builtins\Int.fs"/>
+        <Compile Include="Builtins\Float.fs"/>
+        <Compile Include="Builtins\String.fs"/>
+        <Compile Include="Builtins\Function.fs"/>
+        <Compile Include="Builtins\BuiltinFunctions.fs"/>
+        <Compile Include="Builtins\Builtins.fs"/>
+        <Compile Include="Main.fs"/>
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Parser\Parser.fsproj" />
+        <ProjectReference Include="..\Parser\Parser.fsproj"/>
     </ItemGroup>
 
 </Project>

@@ -38,7 +38,6 @@ type Node =
 
     | ImportNamespace of string * Node option
     | ImportAll of string * Node option
-    | ImportFrom of string * Node list * Node option
     | Entrypoint of Node
 
     | Eval of Node

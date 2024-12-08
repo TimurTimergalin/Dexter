@@ -1,7 +1,7 @@
 ﻿module Interpreter.Builtins.Bool
 
 open System.Collections.Generic
-open Interpreter.Main
+open Interpreter.Evaluate
 open Interpreter.Value
 
 let boolMembers: Context = Dictionary()

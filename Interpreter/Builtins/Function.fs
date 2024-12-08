@@ -2,7 +2,7 @@
 
 open System.Collections.Generic
 open Interpreter.Builtins.BuiltinRefs
-open Interpreter.Main
+open Interpreter.Evaluate
 open Interpreter.Value
 
 let functionMembers: Context = Dictionary()
@@ -20,12 +20,6 @@ let functionTruth _ _ = true' ()
 functionMembers.Add("truth", Val(Function(functionTruth)))
 
 let reverseComposition =
-    Function(
-        fun _ v -> Function(
-            fun _ v' -> Function(
-                fun _ v'' -> Application(v', Application(v, v''))
-            )
-        )
-    )
-functionMembers.Add("(>>)", Val(reverseComposition))
+    Function(fun _ v -> Function(fun _ v' -> Function(fun _ v'' -> Application(v', Application(v, v'')))))
 
+functionMembers.Add("(>>)", Val(reverseComposition))

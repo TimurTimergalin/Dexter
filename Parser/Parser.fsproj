@@ -6,20 +6,20 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="Ast.fs" />
-        <Compile Include="debug.fs" />
-        <Compile Include="Context.fs" />
-        <Compile Include="Literals.fs" />
-        <Compile Include="Spaces.fs" />
-        <Compile Include="Multiline.fs" />
-        <Compile Include="Names.fs" />
-        <Compile Include="Lists.fs" />
-        <Compile Include="Patterns.fs" />
-        <Compile Include="Main.fs" />
+        <Compile Include="Ast.fs"/>
+        <Compile Include="debug.fs"/>
+        <Compile Include="Context.fs"/>
+        <Compile Include="Literals.fs"/>
+        <Compile Include="Spaces.fs"/>
+        <Compile Include="Multiline.fs"/>
+        <Compile Include="Names.fs"/>
+        <Compile Include="Lists.fs"/>
+        <Compile Include="Patterns.fs"/>
+        <Compile Include="Main.fs"/>
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="FParsec" Version="1.1.1" />
+        <PackageReference Include="FParsec" Version="1.1.1"/>
     </ItemGroup>
 
 </Project>

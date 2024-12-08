@@ -2,12 +2,12 @@
 
 open Interpreter.Value
 
-type InterpreterParams = {
-    run: bool;
-    module': string 
-}
+type InterpreterParams =
+    { run: bool
+      module': string
+      stdPath: string
+      libPath: string }
 
-type InterpreterResults = {
-    context: Context
-    result: Value option
-}
+type InterpreterResults =
+    { context: Context
+      result: Value option }
