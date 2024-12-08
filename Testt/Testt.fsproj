@@ -10,6 +10,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\Interpreter\Interpreter.fsproj" />
       <ProjectReference Include="..\Parser\Parser.fsproj" />
     </ItemGroup>
 

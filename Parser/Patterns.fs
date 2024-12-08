@@ -32,26 +32,31 @@ let listPattern valueless =
 let nameBind =
     plainName
     .>> notFollowedByL (skipChar '.' <|> (ws >>? skipChar '(')) "namespaced identifier or constructor call"
+    |>> NameBind
 
 let constructorPattern valueless =
     let constructorArgs =
         (ws >>? skipChar '(' >>. anyWs >>. commaSeparated (pattern valueless) false false
          .>> anyWs
          .>> skipChar ')')
-    
-    let pargs = if valueless then constructorArgs else (opt constructorArgs |>> Option.defaultValue [])
+
+    let pargs =
+        if valueless then
+            constructorArgs
+        else
+            (opt constructorArgs |>> Option.defaultValue [])
+
     namespacedName .>>. pargs |>> ConstructorPattern
 
 let tier1Pattern valueless =
     let res =
-        BP(
-            choice
-                [ skipPattern
-                  attempt nameBind
-                  constructorPattern valueless
-                  listPattern valueless
-                  patternInParenthesis valueless ]
-        )
+        choice
+            [ skipPattern
+              attempt nameBind
+              constructorPattern valueless
+              listPattern valueless
+              patternInParenthesis valueless ]
+
 
     if valueless then res else res <|> literalPattern
 

@@ -63,6 +63,16 @@ let illegalOperator lst =
 let illegalInfixOperator = illegalOperator (List.concat [illegalOperatorList;unaryOperatorList])
 let illegalOperatorDef = illegalOperator illegalOperatorList
 
+let innerOperators = [
+    "&&"
+    "||"
+    "|>"
+    "<|"
+    "::"
+]
+
+let illegalOperatorDeclaration = illegalOperator (List.concat [illegalOperatorList ; innerOperators])
+
 let anyOperator = many1 allowedOperatorChar |>> (List.map string >> String.concat "")
 
 let operator' illegal = notFollowedByL illegal "illegal operator" >>. anyOperator
@@ -80,7 +90,7 @@ let operatorDef' pop =
     skipChar '(' >>. anyWs >>. pop .>> anyWs .>> skipChar ')'
 
 let prefixOperator: DexterParser<_> = operatorDef' (optionalOperator (operator' illegalOperatorDef))
-let operatorDef = operatorDef' ((operator' illegalOperatorDef |>> fun x -> Operator(x, false)) .>> notFollowedByL (skipChar '?') "optional operator")
+let operatorDef = operatorDef' ((operator' illegalOperatorDeclaration |>> fun x -> Operator(x, false)) .>> notFollowedByL (skipChar '?') "optional operator")
 
 let unaryOperator = optionalOperator unaryOperator'
     

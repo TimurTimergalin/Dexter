@@ -15,9 +15,8 @@ let topLevelSetter str (ctx: Context) value = withSet ctx str (Val value)
 let lastName name =
     match name with
     | Identifier s -> s
-    | Operator(s, opt) ->
-        let qm = if opt then "?" else ""
-        "(" + s + qm + ")"
+    | Operator(s, _) ->
+        "(" + s + ")"
 
 let fullName =
     function
@@ -25,11 +24,12 @@ let fullName =
 
 let rec getRef (stack: ContextStack) (NamespacedName(ns, name) as nsName) =
     let fn = fullName nsName
+    let ln = lastName name
 
     match stack with
     | [] -> raise (nameError fn)
     | head :: tail ->
-        if not (head.ContainsKey(List.head ns)) then
+        if (ns = [] && not (head.ContainsKey ln)) || (ns <> [] && not (head.ContainsKey(List.head ns))) then
             getRef tail nsName
         else
             let folder =
@@ -42,7 +42,6 @@ let rec getRef (stack: ContextStack) (NamespacedName(ns, name) as nsName) =
                     | Namespace ctx' -> ctx')
 
             let finalCtx = List.fold folder head ns
-            let ln = lastName name
 
             if not (finalCtx.ContainsKey(ln)) then
                 raise (nameError fn)

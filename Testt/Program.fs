@@ -1,16 +1,20 @@
-﻿open System.Collections.Generic
-open FParsec
-open Parser
-open System
+﻿open FParsec
+open Interpreter.Builtins.Builtins
+open Interpreter.Main
+open Interpreter.Value
 open Parser.Main
 
 [<EntryPoint>]
 let main argv =
-    let parser = program
-    let toParse = "let x = match a {case b.c -> None }"
-    
-    match run parser toParse with
-    | Success(node, _, _) -> printf $"S:{node}"
-    | Failure(s, _, _) -> printf $"F:{s}"
-
+    builtinsInit()
+    let parser = expression .>> eof
+    let input = "None |>? fun x -> x + 2"
+    let value =
+        match run parser input with
+        | Success(node, _, _) -> node
+        | Failure(s, _, _) -> failwith s
+    let stack = [builtins]
+    let result = dereference stack (evalAll stack (Unrecognizable value))
+    let toPrint = result
+    printf $"{toPrint}"
     0 // return an integer exit code

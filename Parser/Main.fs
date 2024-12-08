@@ -155,7 +155,7 @@ tier0ExprRef.Value <-
         | Operator("|", _) -> 8.
         | Operator("&&", _) -> 9.
         | Operator("||", _) -> 10.
-        | Operator("<|", _) -> 11.
+        | Operator("<|", _) -> 12.
         | Operator("|>", _) -> 12.
         | Operator("<<", _) -> 13.
         | Operator(">>", _) -> 13.
@@ -196,9 +196,9 @@ tier0ExprRef.Value <-
                         else
                             let combined =
                                 if assoc = 1 then
-                                    Application(Application(op, opd1), opd2)
+                                    Application(Application(NamespacedName([], op), opd1), opd2)
                                 else
-                                    Application(Application(op, opd2), opd1)
+                                    Application(Application(NamespacedName([], op), opd2), opd1)
 
                             combiner' restOp (combined, nextOpds) acc
 
@@ -219,7 +219,7 @@ tier0ExprRef.Value <-
         | [] -> first
         | _ -> formTree operators operands
 
-    tier1Expr .>>. many ((attempt ws1 >>? operator .>> anyWs) .>>. tier1Expr)
+    tier1Expr .>>. many ((ws >>? operator .>> anyWs) .>>. tier1Expr)
     |>> mapper
 
 let expression = tier0Expr
@@ -251,8 +251,8 @@ let constructor =
     )
     <| fun name args ->
         match args with
-        | None -> ConstructorCall(name, [])
-        | Some args' -> ConstructorCall(name, args')
+        | None -> ConstructorDeclaration(name, [])
+        | Some args' -> ConstructorDeclaration(name, args')
 
 let typeMembers =
     skipChar '{' >>. anyWs >>. multiline (equation true) false

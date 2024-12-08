@@ -33,7 +33,7 @@ type Node =
 
     | Equation of Node * Node
 
-    | ConstructorCall of Node * Node list
+    | ConstructorDeclaration of Node * Node list
     | TypeDeclaration of Node * Node list * Node list
 
     | ImportNamespace of string * Node option
