@@ -40,3 +40,11 @@ let boolEq =
             )
     )
 boolMembers.Add("(=)", Val boolEq)
+
+let boolNeg =
+    Function(
+        fun st v ->
+            if satisfiesConstructor st trueRef.Value v then false'()
+            elif satisfiesConstructor st falseRef.Value v then true'()
+            else raise (unexpectedType "Bool.(!)")
+    )
