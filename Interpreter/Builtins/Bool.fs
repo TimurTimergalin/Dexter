@@ -1,7 +1,9 @@
 ﻿module Interpreter.Builtins.Bool
 
 open System.Collections.Generic
+open Interpreter.Builtins.BuiltinRefs
 open Interpreter.Evaluate
+open Interpreter.Exceptions
 open Interpreter.Value
 
 let boolMembers: Context = Dictionary() |> applyDefaultRepr
@@ -14,5 +16,27 @@ let isBool stack (v: Value) =
     objIsInst boolType evaluated
 
 boolMembers.Add("inst", Val(Function(isBool)))
-let boolTruth stack v = v
+let boolTruth st v =
+    let ev = dereference st v
+    match ev with
+    | Object(Constructor(_, _, type'), _) when typeEq type' boolType -> ev
+    | _ -> raise (unexpectedType "Bool.truth")
 boolMembers.Add("truth", Val(Function(boolTruth)))
+
+let boolEq =
+    Function(
+        fun st v ->
+            Function(
+                fun st' v' ->
+                    let ev = dereference st v
+                    let ev' = dereference st' v'
+                    match ev with
+                    | Object(Constructor(name, _, type'), _) when typeEq type' boolType ->
+                        match ev' with
+                        | Object(Constructor(name', _, type''), _) when typeEq type'' boolType ->
+                            if name = name' then true'() else false'()
+                        | _ -> raise (unexpectedType "Bool.(=)")
+                    | _ -> raise (unexpectedType "Bool.(=)")
+            )
+    )
+boolMembers.Add("(=)", Val boolEq)
