@@ -15,13 +15,3 @@ let isList stack v =
     objIsInst listType evaluated
 
 listMembers.Add("inst", Val(Function(isList)))
-
-let listTruth stack v =
-    let evaluated = dereference stack v
-
-    if satisfiesConstructor stack endCons evaluated then
-        false' ()
-    else
-        true' ()
-
-listMembers.Add("truth", Val(Function(listTruth)))

@@ -6,7 +6,7 @@ open Interpreter.Evaluate
 open Interpreter.Exceptions
 open Interpreter.Value
 
-let floatMembers: Context = Dictionary()
+let floatMembers: Context = Dictionary() |> applyDefaultNegation |> applyDefaultInequality
 let floatType = Type("Float", floatMembers)
 
 let isFloat stack v =
@@ -218,6 +218,6 @@ let floatEq =
                 match ev' with
                 | Int y -> if x = float y then true'() else false'()
                 | Float y -> if x = y then true'() else false'()
-                | _ -> raise (unexpectedType "Float.(=)")
+                | _ -> false'()
             | _ -> raise (unexpectedType "Float.(=)")))
 floatMembers.Add("(=)", Val floatEq)

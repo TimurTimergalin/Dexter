@@ -6,7 +6,7 @@ open Interpreter.Exceptions
 open Interpreter.Evaluate
 open Interpreter.Value
 
-let intMembers: Context = Dictionary()
+let intMembers: Context = Dictionary() |> applyDefaultNegation |> applyDefaultInequality
 let intType = Type("Int", intMembers)
 
 let isInt stack v =
@@ -242,7 +242,7 @@ let intEq =
                 match ev' with
                 | Int y -> if x = y then true'() else false'()
                 | Float y -> if float x = y then true'() else false'()
-                | _ -> raise (unexpectedType "Int.(=)")
+                | _ -> true'()
             | _ -> raise (unexpectedType "Int.(=)")
             ))
 intMembers.Add("(=)", Val intEq)

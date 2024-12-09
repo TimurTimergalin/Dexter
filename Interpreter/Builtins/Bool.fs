@@ -6,7 +6,7 @@ open Interpreter.Evaluate
 open Interpreter.Exceptions
 open Interpreter.Value
 
-let boolMembers: Context = Dictionary() |> applyDefaultRepr
+let boolMembers: Context = Dictionary() |> applyDefaultRepr |> applyDefaultInequality
 let boolType = Type("Bool", boolMembers)
 let trueCons = Constructor("True", 0, boolType)
 let falseCons = Constructor("False", 0, boolType)
@@ -35,7 +35,7 @@ let boolEq =
                         match ev' with
                         | Object(Constructor(name', _, type''), _) when typeEq type'' boolType ->
                             if name = name' then true'() else false'()
-                        | _ -> raise (unexpectedType "Bool.(=)")
+                        | _ -> false'()
                     | _ -> raise (unexpectedType "Bool.(=)")
             )
     )
