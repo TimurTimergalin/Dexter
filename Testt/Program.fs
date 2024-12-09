@@ -4,5 +4,5 @@ type Lol = int * int
 
 [<EntryPoint>]
 let main argv =
-    let path = Lol(2, 2)
+    let x = "a" |> int 
     0 // return an integer exit code

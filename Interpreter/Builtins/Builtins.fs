@@ -42,6 +42,10 @@ let builtins: Context =
     
     res.Add("repr", Val (mixInBuiltins repr))
     res.Add("print", Val (mixInBuiltins print))
+    res.Add("truth", Val (mixInBuiltins truth))
+    res.Add("input", Val (mixInBuiltins input))
+    res.Add("int", Val (mixInBuiltins int'))
+    res.Add("float", Val (mixInBuiltins float'))
 
     res
 
@@ -68,3 +72,7 @@ let builtinsInit () =
     
     reprRef.Value <- Ref(builtins, topLevelGetter "repr", topLevelSetter "repr")
     printRef.Value <- Ref(builtins, topLevelGetter "print", topLevelSetter "print")
+    truthRef.Value <-Ref(builtins, topLevelGetter "truth", topLevelSetter "truth")
+    inputRef.Value <- Ref(builtins, topLevelGetter "input", topLevelSetter "input")
+    int'Ref.Value <- Ref(builtins, topLevelGetter "int", topLevelSetter "int")
+    float'Ref.Value <- Ref(builtins, topLevelGetter "float", topLevelSetter "float")

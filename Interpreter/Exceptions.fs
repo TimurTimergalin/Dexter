@@ -20,10 +20,13 @@ let TypeError x = DexterError("Type error", x)
 let notCallableError = TypeError "Non-callable object called"
 let noMemberError tn mn =
     TypeError $"Type '%s{tn}' does not have a member '%s{mn}'"
-let truthNotBoolException objTn resTn =
-    TypeError $"When resolving condition, 'truth' of type '%s{objTn}' returned type '%s{resTn}' instead of bool"
+let truthNotBoolException objTn =
+    TypeError $"'truth' of type '%s{objTn}' did not return bool"
+let reprNotStringException objTn =
+    TypeError $"'repr' of type '%s{objTn}' did not return string"
 let notOverridable name =
     TypeError $"Internal member function %s{name} cannot be overridden"
+let conversionError from to' = TypeError $"Unable to convert instance of type '%s{from}' to '%s{to'}'"
 
 let EntrypointError x = DexterError("Entrypoint error", x)
 let redefinitionError file =
@@ -38,3 +41,6 @@ let invalidExtension name =
     ImportError $"File '%s{name}' does not have a proper extension '.dxt', so it cannot be imported"
 let sourceNotFound name =
     ImportError $"File '%s{name}' does not exist"
+    
+let ValueError x = DexterError("Value error", x)
+let parseError tn = ValueError $"Unable to parse %s{tn}"

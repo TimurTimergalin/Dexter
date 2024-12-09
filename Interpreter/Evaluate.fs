@@ -212,8 +212,7 @@ and checkCondition (stack: ContextStack) (cond: Value) =
     | x when satisfiesConstructor stack (extractConstructor falseRef.Value) x -> false
     | x ->
         let (Type(otn, _)) = getType stack evaluated
-        let (Type(rtn, _)) = getType stack x
-        raise (truthNotBoolException otn rtn)
+        raise (truthNotBoolException otn)
 
 and defaultOperator stack opName value =
     let (Type(name, ns)) = getType stack value
@@ -389,17 +388,6 @@ and performType
     let stack' = finalClosureCtx :: stack
     let members' = FSharp.Collections.List.fold (performEquation stack') members body
 
-    let internalFuncs = [ "inst" ]
-
-    FSharp.Collections.List.fold
-        (fun _ x ->
-            if members'.ContainsKey(x) then
-                raise (notOverridable x)
-            else
-                ())
-        ()
-        internalFuncs
-
     let members'' =
         members'
         |> applyDefaultTruth
@@ -407,6 +395,7 @@ and performType
         |> applyDefaultInequality
         |> applyDefaultNegation
         |> applyDefaultRepr
+        |> applyDefaultInst
 
     withSet finalClosureCtx typeName (Namespace members'')
 
@@ -415,9 +404,20 @@ and applyDefaultTruth (members: Context) =
         Value.Function(fun st v ->
             let (Object(Constructor(_, argsCount, _), _)) = dereference st v
             if argsCount = 0 then false' () else true' ())
+    
+    let checkedTruth customTruth =
+        Value.Function(
+            fun st v ->
+                let toEval = Value.Application(customTruth, v)
+                let Type(tn, _) as type' = getType st toEval
+                if  not (typeEq type' boolRef.Value) then
+                    raise (truthNotBoolException tn)
+                toEval
+        )
 
     if members.ContainsKey "truth" then
-        members
+        let (Val customTruth) = members["truth"]
+        withSet members "truth" (Val (checkedTruth customTruth))
     else
         withSet members "truth" (Val defaultTruth)
 
@@ -461,15 +461,30 @@ and applyDefaultRepr (members: Context) =
         | Has _ -> name + "(" + String.concat ", " (Seq.map (repr st) args) + ")"
 
     let defaultRepr = Value.Function(fun st v -> String(repr st v))
+    
+    let checkedRepr customRepr =
+        Value.Function(
+            fun st v ->
+                let toEval = Value.Application(customRepr, v)
+                let Type(tn, _) as type' = getType st toEval
+                if  not (typeEq type' stringRef.Value) then
+                    raise (reprNotStringException tn)
+                toEval
+        )
 
     if members.ContainsKey "repr" then
-        members
+        let (Val customRepr) = members["repr"]
+        withSet members "repr" (Val (checkedRepr customRepr))
     else
         withSet members "repr" (Val defaultRepr)
-
-let rec dereferenceAll stack v =
-    let evaluated = dereference stack (evalAll stack v)
-
-    match evaluated with
-    | Object(cons, args) -> Object(cons, map (dereferenceAll stack) args)
-    | _ -> evaluated
+and applyDefaultInst (members: Context) =
+    if members.ContainsKey "inst" then
+        raise (notOverridable "inst")
+    
+    let inst =
+        Value.Function(
+            fun st v ->
+                let (Type(_, ns)) = getType st v
+                if ns = members then true'() else false'()
+        )
+    withSet members "inst" (Val inst)

@@ -26,6 +26,10 @@ let functionRef = ref Absent
 
 let reprRef = ref (Action <| fun () -> failwith "not init")
 let printRef = ref (Action <| fun () -> failwith "not init")
+let truthRef = ref (Action <| fun () -> failwith "not init")
+let inputRef = ref (Action <| fun () -> failwith "not init")
+let int'Ref = ref (Action <| fun () -> failwith "not init")
+let float'Ref = ref (Action <| fun () -> failwith "not init")
 
 let extractConstructor (Ref(ctx, getter, _)) =
     match getter ctx with
