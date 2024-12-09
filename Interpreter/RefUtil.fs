@@ -55,5 +55,5 @@ let rec getRef (stack: ContextStack) (NamespacedName(ns, name) as nsName) =
 let getRefSafe stack nsName =
     try
         Result.Ok(getRef stack nsName)
-    with :? NameError ->
+    with :? DexterError ->
         Result.Error()

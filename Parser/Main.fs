@@ -10,6 +10,7 @@ open Parser.Multiline
 open Parser.Names
 open Parser.Patterns
 open Parser.Spaces
+open Parser.debug
 
 let tier0Expr, tier0ExprRef = createParserForwardedToRef<Node, ParserContext> ()
 
@@ -228,7 +229,7 @@ let equation allowOperator =
 
     let lhs =
         ((allowedName .>>? notFollowedBy (skipChar '.') |>> NameBind)
-         .>>. (anyWs1 >>. opt functionArgs)
+         .>>. (anyWs >>. opt functionArgs)
          <|> (pattern true |>> fun x -> (x, None)))
 
     pipe2 (keyword "let" >>. anyWs >>. lhs .>> anyWs) (skipChar '=' >>. anyWs >>. expression)
@@ -289,4 +290,4 @@ let import =
 
 let statement = entrypoint <|> import <|> tier1Statement
 
-let program = anyWs >>. multiline statement true .>> anyWs .>> eof |>> Program
+let program = anyWs >>. (multiline statement true) .>> anyWs .>> eof |>> Program

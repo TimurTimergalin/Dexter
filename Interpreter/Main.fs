@@ -51,7 +51,7 @@ let rec performProgram
     (index: ModuleIndex)
     : InterpreterResults * ModuleIndex =
     let closureCtx: Context = Dictionary()
-    let stack = [ closureCtx; builtins ]
+    let stack = [ builtins ]
     let initRes: InterpreterResults = { context = closureCtx; result = None }
 
     let res =
@@ -59,9 +59,8 @@ let rec performProgram
             (fun (res', index') stmt ->
                 match stmt with
                 | Equation _ ->
-                    let res'' =
-                        { res' with
-                            context = performEquation stack res'.context stmt }
+                    let newCtx = performEquation stack res'.context stmt
+                    let res'' = {context = newCtx; result = res'.result}
 
                     (res'', index')
                 | Eval _ ->
@@ -81,7 +80,7 @@ let rec performProgram
                     | None ->
                         let res'' =
                             { res' with
-                                result = Some(Unrecognizable ex) }
+                                result = Some(Closure(Unrecognizable ex, res'.context::stack, false)) }
 
                         (res'', index')
                     | Some _ -> raise (redefinitionError pars.module')
@@ -204,7 +203,7 @@ let runDexter filename stdPath libPath =
             path
             { modules = Map.empty
               beingProcessed = Set.empty }
-
+    
     match res.result with
     | None -> ()
-    | Some expr -> evalAll [ res.context ] expr |> ignore
+    | Some expr -> evalAll [] expr |> ignore

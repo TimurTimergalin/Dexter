@@ -1,4 +1,5 @@
 ﻿open System
+open Interpreter.Exceptions
 open Interpreter.Main
 
 [<EntryPoint>]
@@ -9,7 +10,9 @@ let main argv =
     else
         try
             runDexter argv[0] "Std" "Lib"
-        with :? Exception as e ->
-            printf $"Error: %s{e.Message}"
-
+        with
+        | :? DexterError as e ->
+            printf $"%s{e.Data0}: %s{e.Data1}"
+        // | :? Exception as e ->
+        //     printf $"System error: %s{e.Message}"
         0

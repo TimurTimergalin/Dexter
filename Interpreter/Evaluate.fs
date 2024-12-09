@@ -79,7 +79,7 @@ let rec eval1 (stack: ContextStack) (value: Value) : Value =
             let pattern = compilePattern stack arg
 
             let res _ v =
-                let clr = pattern v
+                let clr = pattern v (Dictionary())
 
                 match clr with
                 | None -> raise patternFailed
@@ -87,11 +87,11 @@ let rec eval1 (stack: ContextStack) (value: Value) : Value =
 
             Value.Function res
         | Match(valueNode, cases) ->
-            let tempCtx = withSet (Dictionary()) "temp" (Val(Unrecognizable valueNode))
+            let tempCtx = withSet (Dictionary()) "temp" (Val(Closure(Unrecognizable valueNode, stack, false)))
             let value = Ref(tempCtx, topLevelGetter "temp", topLevelSetter "temp")
 
             let checkCase (Case(pattern, cond, body)) =
-                let matchResult = compilePattern stack pattern value
+                let matchResult = compilePattern stack pattern value (Dictionary())
 
                 match matchResult with
                 | None -> None
@@ -136,6 +136,7 @@ let rec eval1 (stack: ContextStack) (value: Value) : Value =
         | Closure(value'', stack'', false) -> Closure(value'', List.concat [ stack''; stack' ], isolated)
         | Object(cons, args) -> Object(cons, map (fun v -> Closure(v, stack', isolated)) args)
         | Value.Function(f) -> Value.Function(fun st v -> Closure(f st v, stack', isolated))
+        | Value.Application(f, arg) -> Value.Application(Closure(f, stack', isolated), Closure(arg, stack',isolated))
         | x when not (recognizable x) -> Closure(eval1 stack' x, stack', isolated)
         | x -> x
     | Ref(ctx, getter, setter) ->
@@ -242,6 +243,7 @@ and compileConstructor
     (Constructor(cn, argsCount, Type(tn, _)) as cons)
     args
     (value: Value)
+    (saveTo: Context)
     : Context option =
     let given = FSharp.Collections.List.length args
 
@@ -255,28 +257,28 @@ and compileConstructor
         let subtasks = Seq.zip args args'
 
         let results =
-            subtasks |> Seq.map (fun (n, v) -> compilePattern stack n v) |> Seq.toList
+            subtasks |> Seq.map (fun (n, v) -> compilePattern stack n v (Dictionary())) |> Seq.toList
 
         if not (List.forall Option.isSome results) then
             None
         else
             let someResults = results |> List.map Option.get
-            let ctx' = combine someResults
+            let ctx' = combine someResults saveTo
 
             match ctx' with
             | Ok ctx'' -> Some ctx''
             | Error name -> raise (incorrectNameBinding name)
 
-and compilePattern (stack: ContextStack) (node: Node) (value: Value) : Context option =
+and compilePattern (stack: ContextStack) (node: Node) (value: Value) (saveTo: Context) : Context option =
     match node with
-    | SkipPattern -> Some(Dictionary())
+    | SkipPattern -> Some(saveTo)
     | NameBind nsName ->
         let ref' = getRefSafe stack nsName
 
         let res =
             let (NamespacedName(_, name')) = nsName
             let ln = lastName name'
-            Some(withSet (Dictionary()) ln (Val value))
+            Some(withSet saveTo ln (Val value))
 
         match ref' with
         | Ok(Ref(ctx, getter, _)) ->
@@ -286,7 +288,7 @@ and compilePattern (stack: ContextStack) (node: Node) (value: Value) : Context o
                     raise (constructorError cn tn argsCount 0)
 
                 if satisfiesConstructor stack cons value then
-                    Some(Dictionary())
+                    Some(saveTo)
                 else
                     None
             | _ -> res
@@ -295,24 +297,24 @@ and compilePattern (stack: ContextStack) (node: Node) (value: Value) : Context o
         let (Ref(ctx, getter, _)) = getRef stack nsName
 
         match getter ctx with
-        | Constructor _ as cons -> compileConstructor stack cons args value
+        | Constructor _ as cons -> compileConstructor stack cons args value saveTo
     | LiteralPattern literal ->
         let evaluated = dereference stack value
 
         match literal with
         | StringLiteral s ->
             match evaluated with
-            | String s' when s' = s -> Some(Dictionary())
+            | String s' when s' = s -> Some(saveTo)
             | _ -> None
         | IntLiteral i ->
             match evaluated with
-            | Int i' when i = i' -> Some(Dictionary())
-            | Float f when float i = f -> Some(Dictionary())
+            | Int i' when i = i' -> Some(saveTo)
+            | Float f when float i = f -> Some(saveTo)
             | _ -> None
         | FloatLiteral f ->
             match evaluated with
-            | Float f' when f = f' -> Some(Dictionary())
-            | Int i when f = float i -> Some(Dictionary())
+            | Float f' when f = f' -> Some(saveTo)
+            | Int i when f = float i -> Some(saveTo)
             | _ -> None
         | _ -> failwith "Unreachable: unknown literal"
     | ListPattern nodes ->
@@ -321,14 +323,15 @@ and compilePattern (stack: ContextStack) (node: Node) (value: Value) : Context o
             let evaluated = dereference stack value
 
             match evaluated with
-            | Object(Constructor("Empty", 0, type'), _) when typeEq type' listRef.Value -> Some(Dictionary())
+            | Object(Constructor("Empty", 0, type'), _) when typeEq type' listRef.Value -> Some(saveTo)
             | _ -> None
-        | head :: tail -> compileConstructor stack (extractConstructor nodeRef.Value) [ head; ListPattern tail ] value
-    | HeadTailPattern(head, tail) -> compileConstructor stack (extractConstructor nodeRef.Value) [ head; tail ] value
+        | head :: tail -> compileConstructor stack (extractConstructor nodeRef.Value) [ head; ListPattern tail ] value saveTo
+    | HeadTailPattern(head, tail) -> compileConstructor stack (extractConstructor nodeRef.Value) [ head; tail ] value saveTo
     | _ -> failwith "Trying to compile not-a-pattern"
 
 and evalAll (stack: ContextStack) =
     function
+    | x when not (recognizable x) -> evalAll stack (evalUntilRecognizable stack x)
     | Object(Constructor(name, argsCount, Type(tn, _)) as cons, args) ->
         let givenArgsCount = args.Count
 
@@ -340,25 +343,21 @@ and evalAll (stack: ContextStack) =
     | Ref(ctx, getter, setter) ->
         let ctx' = setter ctx (evalAll stack (getter ctx))
         Ref(ctx', getter, setter)
-    | Unrecognizable _ as nn -> evalAll stack (evalUntilRecognizable stack nn)
     | x -> x
 
 and performEquation stack (closureCtx: Context) (Equation(lhs, rhs)) =
     let stack' = closureCtx :: stack
 
     let patternResult =
-        compilePattern stack' lhs (Closure(Unrecognizable rhs, [ closureCtx ], false))
+        compilePattern stack' lhs (Closure(Unrecognizable rhs, stack', false)) closureCtx
 
     match patternResult with
     | None -> raise patternFailed
-    | Some ctx ->
-        match combine2 closureCtx ctx with
-        | Ok(ctx') -> ctx'
-        | Error key -> raise (incorrectNameBinding key)
+    | Some ctx -> ctx
 
 and performEval stack closureCtx (Eval expr) =
     let stack' = closureCtx :: stack
-    evalAll stack' (Closure(Unrecognizable expr, [ closureCtx ], false)) |> ignore
+    evalAll stack' (Closure(Unrecognizable expr, stack', false)) |> ignore
     closureCtx
 
 and performType
@@ -387,7 +386,7 @@ and performType
     let finalClosureCtx =
         (withSet closureClxWithConstructors typeName (Namespace members))
 
-    let stack' = members :: finalClosureCtx :: stack
+    let stack' = finalClosureCtx :: stack
     let members' = FSharp.Collections.List.fold (performEquation stack') members body
 
     let internalFuncs = [ "inst" ]
@@ -407,7 +406,7 @@ and performType
         |> applyDefaultEquality
         |> applyDefaultInequality
         |> applyDefaultNegation
-        |> applyDefaultNegation
+        |> applyDefaultRepr
 
     withSet finalClosureCtx typeName (Namespace members'')
 

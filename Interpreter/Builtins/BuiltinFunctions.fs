@@ -2,6 +2,7 @@
 
 open Interpreter.Builtins.BuiltinRefs
 open Interpreter.Evaluate
+open Interpreter.RefUtil
 open Interpreter.Value
 
 let andOp =
@@ -21,6 +22,25 @@ let orOp =
 let applicationOp = Function(fun _ v -> Function(fun _ v' -> Application(v, v')))
 
 let reverseApplicationOp =
-    Function((fun _ v -> Function((fun _ v' -> Application(v', v)))))
+    Function (fun _ v -> Function (fun _ v' -> Application(v', v)))
 
-let listConsOp = Function((fun _ v -> Function((fun _ -> node' v))))
+let listConsOp = Function (fun _ v -> Function (fun _ -> node' v))
+
+let repr =
+    Function(
+        fun st v ->
+            let (Type(_, ns)) = getType st v
+            let reprMember = Ref(ns, topLevelGetter "repr", topLevelSetter "repr")
+            Application(reprMember, v)
+    )
+    
+let print =
+    Function(
+        fun st v ->
+            Action(
+                fun () ->
+                    let (String s) = dereference st (Application(reprRef.Value, v))
+                    printf $"%s{s}"
+                    none'()
+            )
+    )

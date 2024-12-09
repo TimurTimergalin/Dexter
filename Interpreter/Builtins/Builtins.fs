@@ -15,6 +15,9 @@ open Interpreter.Value
 
 let builtins: Context =
     let res = Dictionary()
+    
+    let mixInBuiltins = fun x -> Closure(x, [res], false)
+    
     res.Add("None", Val noneCons)
     res.Add("NoneType", Namespace noneTypeMembers)
 
@@ -31,11 +34,14 @@ let builtins: Context =
     res.Add("String", Namespace stringMembers)
     res.Add("Function", Namespace functionMembers)
 
-    res.Add("(&&)", Val andOp)
-    res.Add("(||)", Val orOp)
-    res.Add("(<|)", Val applicationOp)
-    res.Add("(|>)", Val reverseApplicationOp)
-    res.Add("(::)", Val listConsOp)
+    res.Add("(&&)", Val (mixInBuiltins andOp))
+    res.Add("(||)", Val (mixInBuiltins orOp))
+    res.Add("(<|)", Val (mixInBuiltins applicationOp))
+    res.Add("(|>)", Val (mixInBuiltins reverseApplicationOp))
+    res.Add("(::)", Val (mixInBuiltins listConsOp))
+    
+    res.Add("repr", Val (mixInBuiltins repr))
+    res.Add("print", Val (mixInBuiltins print))
 
     res
 
@@ -59,3 +65,6 @@ let builtinsInit () =
     floatRef.Value <- floatType
     stringRef.Value <- stringType
     functionRef.Value <- functionType
+    
+    reprRef.Value <- Ref(builtins, topLevelGetter "repr", topLevelSetter "repr")
+    printRef.Value <- Ref(builtins, topLevelGetter "print", topLevelSetter "print")

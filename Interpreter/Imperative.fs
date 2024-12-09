@@ -24,14 +24,14 @@ let combine2 (dict1: Dictionary<'a, 'b>) (dict2: Dictionary<'a, 'b>) =
 
     result
 
-let combine (dicts: Dictionary<'a, 'b> seq) =
+let combine (dicts: Dictionary<'a, 'b> seq) (saveTo: Dictionary<'a, 'b>) =
     dicts
     |> Seq.fold
         (fun st new' ->
             match st with
             | Error _ as e -> e
             | Ok v -> combine2 v new')
-        (Ok(Dictionary()))
+        (Ok(saveTo))
 
 
 let withAdded (lst: List<'a>) v =

@@ -9,20 +9,23 @@ open Interpreter.Value
 // Можно сказать, что BuiltinRefs - "заголовочный файл" для модуля Builtins.
 
 let noneRef = ref (Action <| fun () -> failwith "not init")
-let noneTypeRef = ref (Action <| fun () -> failwith "not init")
+let noneTypeRef = ref Absent
 
 let trueRef = ref (Action <| fun () -> failwith "not init")
 let falseRef = ref (Action <| fun () -> failwith "not init")
-let boolRef = ref (Action <| fun () -> failwith "not init")
+let boolRef = ref Absent
 
 let nodeRef = ref (Action <| fun () -> failwith "not init")
 let endRef = ref (Action <| fun () -> failwith "not init")
-let listRef = ref (Action <| fun () -> failwith "not init")
+let listRef = ref Absent
 
-let intRef = ref (Action <| fun () -> failwith "not init")
-let floatRef = ref (Action <| fun () -> failwith "not init")
-let stringRef = ref (Action <| fun () -> failwith "not init")
-let functionRef = ref (Action <| fun () -> failwith "not init")
+let intRef = ref Absent
+let floatRef = ref Absent
+let stringRef = ref Absent
+let functionRef = ref Absent
+
+let reprRef = ref (Action <| fun () -> failwith "not init")
+let printRef = ref (Action <| fun () -> failwith "not init")
 
 let extractConstructor (Ref(ctx, getter, _)) =
     match getter ctx with
