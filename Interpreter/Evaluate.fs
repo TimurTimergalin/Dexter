@@ -134,6 +134,7 @@ let rec eval1 (stack: ContextStack) (value: Value) : Value =
     | Closure(value', stack', isolated) ->
         match value' with
         | Closure(value'', stack'', false) -> Closure(value'', List.concat [ stack''; stack' ], isolated)
+        | Ref _ as ref' -> ref'
         | Object(cons, args) -> Object(cons, map (fun v -> Closure(v, stack', isolated)) args)
         | Value.Function(f) -> Value.Function(fun st v -> Closure(f st v, stack', isolated))
         | Value.Application(f, arg) -> Value.Application(Closure(f, stack', isolated), Closure(arg, stack',isolated))

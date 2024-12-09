@@ -28,9 +28,10 @@ let absolutePathResolver (pars: InterpreterParams) =
     else
         None
 
-let localResolver from (pars: InterpreterParams) =
+let localResolver (from: string) (pars: InterpreterParams) =
     let path = pars.module'
-    let resPath = Path.GetFullPath(path, from)
+    let folder = Path.GetDirectoryName(from)
+    let resPath = Path.GetFullPath(path, folder)
     if File.Exists resPath then Some resPath else None
 
 let stdResolver (pars: InterpreterParams) =
