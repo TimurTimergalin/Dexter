@@ -27,6 +27,7 @@ let reprNotStringException objTn =
 let notOverridable name =
     TypeError $"Internal member function %s{name} cannot be overridden"
 let conversionError from to' = TypeError $"Unable to convert instance of type '%s{from}' to '%s{to'}'"
+let unexpectedType where = TypeError $"Unexpected type passed to %s{where}"
 
 let EntrypointError x = DexterError("Entrypoint error", x)
 let redefinitionError file =
