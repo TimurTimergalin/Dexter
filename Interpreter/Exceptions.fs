@@ -45,3 +45,7 @@ let sourceNotFound name =
     
 let ValueError x = DexterError("Value error", x)
 let parseError tn = ValueError $"Unable to parse %s{tn}"
+
+let Failure x = DexterError("Failure", x)
+
+    

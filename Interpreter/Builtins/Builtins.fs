@@ -46,6 +46,7 @@ let builtins: Context =
     res.Add("input", Val (mixInBuiltins input))
     res.Add("int", Val (mixInBuiltins int'))
     res.Add("float", Val (mixInBuiltins float'))
+    res.Add("fail", Val (mixInBuiltins fail))
 
     res
 

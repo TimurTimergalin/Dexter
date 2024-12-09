@@ -111,3 +111,12 @@ let float' =
             else
                 raise (conversionError name "float")
     )
+
+let fail =
+    Function(
+        fun st v ->
+            let ev = dereference st v
+            match ev with
+            | String s -> raise (Failure s)
+            | _ -> raise (unexpectedType "fail")
+    )
