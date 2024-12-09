@@ -3,6 +3,7 @@
 open System.Collections.Generic
 open Interpreter.Builtins.BuiltinRefs
 open Interpreter.Evaluate
+open Interpreter.Exceptions
 open Interpreter.Value
 
 let functionMembers: Context = Dictionary()
@@ -16,10 +17,17 @@ let isFunction stack v =
     | _ -> false' ()
 
 functionMembers.Add("inst", Val(Function(isFunction)))
-let functionTruth _ _ = true' ()
+let functionTruth st v =
+    let ev = dereference st v
+    match ev with
+    | Function _ -> true'()
+    | _ -> raise (unexpectedType "Function.truth")
 functionMembers.Add("truth", Val(Function(functionTruth)))
 
 let reverseComposition =
     Function(fun _ v -> Function(fun _ v' -> Function(fun _ v'' -> Application(v', Application(v, v'')))))
-
 functionMembers.Add("(>>)", Val(reverseComposition))
+
+let composition =
+    Function(fun _ v -> Function(fun _ v' -> Function(fun _ v'' -> Application(v, Application(v', v'')))))
+functionMembers.Add("(<<)", Val(reverseComposition))
