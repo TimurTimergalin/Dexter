@@ -1,0 +1,4 @@
+﻿import "IO.dxt" as IO
+
+# Это пример демонстрирует еще одну возможность Dexter - бесконечные функции
+entrypoint = IO.printManySep ", " "this" "thing" "never" "ends!"

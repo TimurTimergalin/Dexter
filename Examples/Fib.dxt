@@ -1,0 +1,9 @@
+﻿# Это пример демонстрирует оптимизацию хвостовой рекурсии.
+# Также можно заметить неявное преобразование между int и float
+
+let fib n = {
+    let fib1 n acc = if n = 0 then acc else fib1 (n - 1) (n * acc)
+    fib1 n 1.0
+}
+
+entrypoint = print (fib 10000)

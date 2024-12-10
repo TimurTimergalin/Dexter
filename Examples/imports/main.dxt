@@ -1,0 +1,7 @@
+﻿import "inter1.dxt" as _i1
+import "inter2.dxt" as _i2
+
+entrypoint = print "I am running at the end of the program"
+
+eval print "I am in the middle!\n"
+

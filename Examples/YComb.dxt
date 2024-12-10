@@ -1,0 +1,11 @@
+﻿# Это пример демонстрирует 2 важных свойства языка - ленивость и динамическую типизированность.
+# Благодаря им на Dexter возможно реализовать Y-комбинатор!
+
+let ycomb f = {
+    let term = fun x -> f (x x)
+    term term
+}
+
+let factEq f n = if n = 0 then 1 else n * f (n - 1)
+let fact = ycomb factEq
+entrypoint = print (fact 5) 

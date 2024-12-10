@@ -1,0 +1,2 @@
+﻿eval print "I will be called on import, but only once per program!"
+eval print "\n"

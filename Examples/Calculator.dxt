@@ -1,0 +1,14 @@
+﻿import * from "Monad.dxt" as Monad
+
+# Это пример демонстрирует работу с "безопасным" - монаидическим - вводом-выводом
+entrypoint = exec { # This is a comment
+    do mprint "Enter first number: "
+    do inp1 <- minput
+    let num1 = int inp1
+    do mprint "Enter second number: "
+    do inp2 <- minput
+    let num2 = int inp2
+    do mprint "Their sum is "
+    let res = num1 + num2
+    do mprintln (num1 + num2)
+}
