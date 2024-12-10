@@ -2,8 +2,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Parser", "Parser\Parser.fsproj", "{3E32970E-6153-456F-9B8F-D44C1B9B36DB}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Testt", "Testt\Testt.fsproj", "{A50C86FF-2B7A-4A1B-9121-BC2295D02D63}"
-EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Interpreter", "Interpreter\Interpreter.fsproj", "{4415105E-23E7-4F39-84CC-AA7399DC1635}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Cli", "Cli\Cli.fsproj", "{69277495-1AF3-47C5-BA93-DC174DF4BD5F}"
@@ -18,10 +16,6 @@ Global
 		{3E32970E-6153-456F-9B8F-D44C1B9B36DB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3E32970E-6153-456F-9B8F-D44C1B9B36DB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3E32970E-6153-456F-9B8F-D44C1B9B36DB}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A50C86FF-2B7A-4A1B-9121-BC2295D02D63}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A50C86FF-2B7A-4A1B-9121-BC2295D02D63}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A50C86FF-2B7A-4A1B-9121-BC2295D02D63}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A50C86FF-2B7A-4A1B-9121-BC2295D02D63}.Release|Any CPU.Build.0 = Release|Any CPU
 		{4415105E-23E7-4F39-84CC-AA7399DC1635}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{4415105E-23E7-4F39-84CC-AA7399DC1635}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4415105E-23E7-4F39-84CC-AA7399DC1635}.Release|Any CPU.ActiveCfg = Release|Any CPU
