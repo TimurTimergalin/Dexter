@@ -303,13 +303,15 @@ and checkCondition (stack: ContextStack) (cond: Value) =
         raise (truthNotBoolException otn)
 
 and defaultOperator stack opName value =
-    let (Type(name, ns)) = getType stack value
-    let prefixOpName = "(" + opName + ")"
+    let toApply value =
+        let (Type(name, ns)) = getType stack value
+        let prefixOpName = "(" + opName + ")"
 
-    if not (ns.ContainsKey prefixOpName) then
-        raise (noMemberError name prefixOpName)
-    else
-        Ref(ns, topLevelGetter prefixOpName, topLevelSetter prefixOpName)
+        if not (ns.ContainsKey prefixOpName) then
+            raise (noMemberError name prefixOpName)
+        else
+            Ref(ns, topLevelGetter prefixOpName, topLevelSetter prefixOpName)
+    ApplyAfter(value, stack, defaultForceStop, [toApply], [], [])
 
 and optionalOperator op =
     Value.Function(fun st v ->
