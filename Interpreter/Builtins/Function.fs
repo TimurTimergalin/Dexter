@@ -10,27 +10,33 @@ let functionMembers: Context = Dictionary() |> applyDefaultNegation |> applyDefa
 let functionType = Type("Function", functionMembers)
 
 let isFunction stack v =
-    let evaluated = dereference stack v
+    let toApply v =
+        let evaluated = dereference stack v
 
-    match evaluated with
-    | Function _ -> true' ()
-    | _ -> false' ()
+        match evaluated with
+        | Function _ -> true' ()
+        | _ -> false' ()
+    ApplyAfter(v, stack, defaultForceStop, [toApply], [], [])
 
 functionMembers.Add("inst", Val(Function(isFunction)))
 let functionTruth st v =
-    let ev = dereference st v
-    match ev with
-    | Function _ -> true'()
-    | _ -> raise (unexpectedType "Function.truth")
+    let toApply v =
+        let ev = dereference st v
+        match ev with
+        | Function _ -> true'()
+        | _ -> raise (unexpectedType "Function.truth")
+    ApplyAfter(v, st, defaultForceStop, [toApply], [], [])
 functionMembers.Add("truth", Val(Function(functionTruth)))
 
 let functionRepr =
     Function(
         fun st v ->
-            let ev = dereference st v
-            match ev with
-            | Function _ -> String "Function"
-            | _ -> raise (unexpectedType "Function.repr")
+            let toApply v =
+                let ev = dereference st v
+                match ev with
+                | Function _ -> String "Function"
+                | _ -> raise (unexpectedType "Function.repr")
+            ApplyAfter(v, st, defaultForceStop, [toApply], [], [])
     )
 functionMembers.Add("repr", Val functionRepr)
 

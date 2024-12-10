@@ -15,6 +15,7 @@ let constructorError cn tn ex gn =
 
 let PatternError x = DexterError("Pattern Error", x)
 let patternFailed = PatternError "Patter matching failed"
+let notAConstructor = PatternError "Unknown constructor in pattern matching"
 
 let TypeError x = DexterError("Type error", x)
 let notCallableError = TypeError "Non-callable object called"

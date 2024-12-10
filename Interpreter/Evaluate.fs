@@ -68,10 +68,9 @@ let rec eval1 (stack: ContextStack) (value: Value) : Value =
         | NamespacedName(ns, name) as nsName ->
             match name with
             | Identifier n' ->
-                let res = getRef stack nsName
-
-                if n' = "acc" then
+                if n' = "func" then
                     printf ""
+                let res = getRef stack nsName
 
                 res
             | Operator(name', opt) ->
@@ -298,7 +297,7 @@ and checkCondition (stack: ContextStack) (cond: Value) =
     match truthValueEvaluated with
     | x when satisfiesConstructor stack (extractConstructor trueRef.Value) x -> true
     | x when satisfiesConstructor stack (extractConstructor falseRef.Value) x -> false
-    | x ->
+    | _ ->
         let (Type(otn, _)) = getType stack evaluated
         raise (truthNotBoolException otn)
 
@@ -364,8 +363,6 @@ and compilePattern (stack: ContextStack) (node: Node) (value: Value) (saveTo: Co
     match node with
     | SkipPattern -> Some(saveTo)
     | NameBind nsName ->
-        let ref' = getRefSafe stack nsName
-
         let res =
             let (NamespacedName(_, name')) = nsName
             let ln = lastName name'
@@ -380,6 +377,7 @@ and compilePattern (stack: ContextStack) (node: Node) (value: Value) (saveTo: Co
 
         match getter ctx with
         | Constructor _ as cons -> compileConstructor stack cons args value saveTo
+        | _ -> raise (notAConstructor)
     | LiteralPattern literal ->
         let evaluated = dereference stack value
 
@@ -487,18 +485,24 @@ and performType
 and applyDefaultTruth (members: Context) =
     let defaultTruth =
         Value.Function(fun st v ->
-            let (Object(Constructor(_, argsCount, _), _)) = dereference st v
-            if argsCount = 0 then false' () else true' ())
+            let toApply v =
+                let (Object(Constructor(_, argsCount, _), _)) = dereference st v
+                if argsCount = 0 then false' () else true' ()
+            ApplyAfter(v, st, defaultForceStop, [toApply], [], [])
+        )
 
     let checkedTruth customTruth =
         Value.Function(fun st v ->
-            let toEval = Value.Application(customTruth, v)
-            let Type(tn, _) as type' = getType st toEval
+            let toApply v =
+                let toEval = Value.Application(customTruth, v)
+                let Type(tn, _) as type' = getType st toEval
 
-            if not (typeEq type' boolRef.Value) then
-                raise (truthNotBoolException tn)
+                if not (typeEq type' boolRef.Value) then
+                    raise (truthNotBoolException tn)
 
-            toEval)
+                toEval
+            ApplyAfter(v, st, defaultForceStop, [toApply], [], [])
+        )
 
     if members.ContainsKey "truth" then
         let (Val customTruth) = members["truth"]
@@ -530,7 +534,11 @@ and applyDefaultInequality (members: Context) =
 
 and applyDefaultNegation (members: Context) =
     let defaultNegation =
-        Value.Function(fun st v -> if checkCondition st v then false' () else true' ())
+        Value.Function(fun st v ->
+            let toApply v =
+                if checkCondition st v then false' () else true' ()
+            ApplyAfter(v, st, defaultForceStop, [toApply], [], [])
+        )
 
     if members.ContainsKey "(!)" then
         members
@@ -545,17 +553,25 @@ and applyDefaultRepr (members: Context) =
         | Empty -> name
         | Has _ -> name + "(" + String.concat ", " (Seq.map (repr st) args) + ")"
 
-    let defaultRepr = Value.Function(fun st v -> String(repr st v))
+    let defaultRepr = Value.Function(
+        fun st v ->
+            let toApply v =
+                String(repr st v)
+            ApplyAfter(v, st, defaultForceStop, [toApply], [], [])
+    )
 
     let checkedRepr customRepr =
         Value.Function(fun st v ->
-            let toEval = Value.Application(customRepr, v)
-            let Type(tn, _) as type' = getType st toEval
+            let toApply v =
+                let toEval = Value.Application(customRepr, v)
+                let Type(tn, _) as type' = getType st toEval
 
-            if not (typeEq type' stringRef.Value) then
-                raise (reprNotStringException tn)
+                if not (typeEq type' stringRef.Value) then
+                    raise (reprNotStringException tn)
 
-            toEval)
+                toEval
+            ApplyAfter(v, st, defaultForceStop, [toApply], [], [])
+        )
 
     if members.ContainsKey "repr" then
         let (Val customRepr) = members["repr"]
@@ -569,7 +585,10 @@ and applyDefaultInst (members: Context) =
 
     let inst =
         Value.Function(fun st v ->
-            let (Type(_, ns)) = getType st v
-            if ns = members then true' () else false' ())
+            let toApply v = 
+                let (Type(_, ns)) = getType st v
+                if ns = members then true' () else false' ()
+            ApplyAfter(v, st, defaultForceStop, [toApply], [], [])
+        )
 
     withSet members "inst" (Val inst)

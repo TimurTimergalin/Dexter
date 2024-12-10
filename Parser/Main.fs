@@ -51,7 +51,7 @@ let application =
         List.fold folder None >> _.Value
 
 
-    pipe2 tier2Expr (many (attempt (ws1 >>? tier3Expr))) (fun f rest -> f :: rest)
+    pipe2 tier2Expr (many (attempt (ws >>? tier3Expr))) (fun f rest -> f :: rest)
     |>> mapper
 
 let conditional: DexterParser<_> =
@@ -111,7 +111,7 @@ let monadExec =
                     let appliedRest = applyBind' rest []
 
                     let bindExpr =
-                        Application(Application(Operator(">>=", false), body), Function(bind, appliedRest))
+                        Application(Application(NamespacedName([], Operator(">>=", false)), body), Function(bind, appliedRest))
 
                     applyBind' [] (bindExpr :: acc)
                 | _ -> applyBind' rest (stmt :: acc)
@@ -223,7 +223,7 @@ let expression = tier0Expr
 let equation allowOperator =
     let allowedName =
         if allowOperator then
-            plainName <|> operatorDef
+            plainName <|> (operatorDef |>> fun x -> NamespacedName([], x))
         else
             plainName
 

@@ -13,6 +13,6 @@ let main argv =
         with
         | :? DexterError as e ->
             printf $"%s{e.Data0}: %s{e.Data1}"
-        // | :? Exception as e ->
-        //     printf $"System error: %s{e.Message}"
+        | :? Exception as e ->
+            printf $"System error: %s{e.Message}"
         0
