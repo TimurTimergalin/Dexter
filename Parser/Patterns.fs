@@ -35,7 +35,7 @@ let nameBind =
 
 let constructorPattern valueless =
     let constructorArgs =
-        (ws >>? skipChar '(' >>. anyWs >>. commaSeparated (pattern valueless) false false
+        (ws >>? skipChar '(' >>. anyWs >>. (commaSeparated (pattern valueless) false false <|>% [])
          .>> anyWs
          .>> skipChar ')')
 

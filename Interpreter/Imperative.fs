@@ -1,5 +1,6 @@
 ﻿module Interpreter.Imperative
 
+open System
 open System.Collections.Generic
 
 // Приведенные ниже функции позволяют работать с изменяемыми Dictionary и List в той же манере, что и с
@@ -12,6 +13,13 @@ open System.Collections.Generic
 let withSet (dict: Dictionary<'a, 'b>) key value =
     dict[key] <- value
     dict
+
+let withSetSafe (dict: Dictionary<'a, 'b>) key value =
+    try
+        dict.Add(key, value)
+        Ok(dict)
+    with :? ArgumentException ->
+        Error ()
 
 let combine2 (dict1: Dictionary<'a, 'b>) (dict2: Dictionary<'a, 'b>) =
     let mutable result = Ok(dict1)

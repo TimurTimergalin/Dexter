@@ -1,6 +1,7 @@
 ﻿module Interpreter.Evaluate
 
 open System.Collections.Generic
+open System.IO
 open Interpreter.Builtins.BuiltinRefs
 open Interpreter.RefUtil
 open Interpreter.Exceptions
@@ -15,14 +16,30 @@ let objIsInst type' obj =
     | Object(Constructor(_, _, type''), _) when typeEq type' type'' -> true' ()
     | _ -> false' ()
 
+let patternRequiresEvaluation (Case(pattern, cond, _)) =
+    if Option.isSome cond then
+        true
+    else
+        match pattern with
+        | SkipPattern
+        | NameBind _ -> false
+        | _ -> true
+
 // Выражение будем называть узнаваемым, если у него можно определить тип, не применяя редукций
 let rec recognizable =
     function
     | Unrecognizable _ -> false
     | Closure _ -> false
-    | Ref(ctx, getter, _) -> recognizable (getter ctx)
+    | Ref(ctx, getter, _) ->
+        let inner = getter ctx
+
+        match inner with
+        | Ref _ -> false
+        | _ -> recognizable inner
     | Action _ -> false
     | Value.Application _ -> false
+    | FlatApplication _ -> false
+    | ApplyAfter _ -> false
     | _ -> true
 
 let constructorToObject (Constructor(_, argsCount, _) as cons) =
@@ -50,7 +67,13 @@ let rec eval1 (stack: ContextStack) (value: Value) : Value =
         | FloatLiteral f -> Float f
         | NamespacedName(ns, name) as nsName ->
             match name with
-            | Identifier _ -> getRef stack nsName
+            | Identifier n' ->
+                let res = getRef stack nsName
+
+                if n' = "acc" then
+                    printf ""
+
+                res
             | Operator(name', opt) ->
                 let nonOptionalOperator =
                     if ns <> [] then
@@ -87,10 +110,12 @@ let rec eval1 (stack: ContextStack) (value: Value) : Value =
 
             Value.Function res
         | Match(valueNode, cases) ->
-            let tempCtx = withSet (Dictionary()) "temp" (Val(Closure(Unrecognizable valueNode, stack, false)))
+            let tempCtx =
+                withSet (Dictionary()) "temp" (Val(Closure(Unrecognizable valueNode, stack, false)))
+
             let value = Ref(tempCtx, topLevelGetter "temp", topLevelSetter "temp")
 
-            let checkCase (Case(pattern, cond, body)) =
+            let checkCase value (Case(pattern, cond, body)) =
                 let matchResult = compilePattern stack pattern value (Dictionary())
 
                 match matchResult with
@@ -106,15 +131,19 @@ let rec eval1 (stack: ContextStack) (value: Value) : Value =
                         else
                             None
 
-            let rec chooseCase =
+            let rec chooseCase value =
                 function
                 | [] -> raise patternFailed
                 | case :: rest ->
-                    match checkCase case with
-                    | None -> chooseCase rest
+                    match checkCase value case with
+                    | None -> chooseCase value rest
                     | Some res -> res
 
-            chooseCase cases
+            if not (List.exists patternRequiresEvaluation cases) then
+                chooseCase value cases // Подменить на ApplyAfter
+            else
+                let toApply x = chooseCase x cases
+                ApplyAfter(value, stack, defaultForceStop, [ toApply ], [], [])
         | Compound stmts ->
             let ctx: Context = Dictionary()
 
@@ -134,25 +163,83 @@ let rec eval1 (stack: ContextStack) (value: Value) : Value =
     | Closure(value', stack', isolated) ->
         match value' with
         | Closure(value'', stack'', false) -> Closure(value'', List.concat [ stack''; stack' ], isolated)
+        | Closure _ as clr -> clr
         | Ref _ as ref' -> ref'
         | Object(cons, args) -> Object(cons, map (fun v -> Closure(v, stack', isolated)) args)
         | Value.Function(f) -> Value.Function(fun st v -> Closure(f st v, stack', isolated))
-        | Value.Application(f, arg) -> Value.Application(Closure(f, stack', isolated), Closure(arg, stack',isolated))
-        | x when not (recognizable x) -> Closure(eval1 stack' x, stack', isolated)
+        | Value.Application(f, arg) -> Value.Application(Closure(f, stack', isolated), Closure(arg, stack', isolated))
+        | FlatApplication(f, args) ->
+            FlatApplication(Closure(f, stack', isolated), List.map (fun x -> Closure(x, stack', isolated)) args)
+        | ApplyAfter _ -> value' // В теории, никогда не случится
+        | x when not (recognizable x) ->
+            let toApply x' = Closure(x', stack', isolated)
+
+            let forceStop (v: Value) =
+                v.IsClosure
+                || v.IsRef
+                || v.IsObject
+                || v.IsFunction
+                || v.IsApplication
+                || v.IsFlatApplication
+                || v.IsApplyAfter
+
+            ApplyAfter(x, stack', forceStop, [ toApply ], [], [])
         | x -> x
     | Ref(ctx, getter, setter) ->
-        let ctx' = setter ctx (eval1 [] (getter ctx))
-        Ref(ctx', getter, setter)
-    | Value.Application(f, arg) ->
-        let evf = dereference stack f
+        let inner = getter ctx
 
-        match evf with
-        | Value.Function(f') -> f' stack arg
-        | _ -> raise notCallableError
+        match inner with
+        | Ref _ -> inner
+        | _ ->
+            let toApply inner' =
+                let ctx' = setter ctx inner'
+                Ref(ctx', getter, setter)
+
+            ApplyAfter(inner, [], defaultForceStop, [ toApply ], [], [])
+    | Value.Application(f, arg) -> FlatApplication(f, [ arg ])
+    | FlatApplication(f, args) ->
+        match f with
+        | FlatApplication(f', args') -> FlatApplication(f', List.concat [ args'; args ])
+        | Value.Application(f', arg) -> FlatApplication(f', arg :: args)
+        | x when not (recognizable x) ->
+            let toApply x' = FlatApplication(x', args)
+            ApplyAfter(x, stack, defaultForceStop, [ toApply ], [], [])
+        | _ ->
+            let evf = dereference stack f
+
+            match evf with
+            | Value.Function f ->
+                match args with
+                | [] -> failwith "Empty flat application"
+                | [ arg ] -> f stack arg
+                | arg :: rest -> FlatApplication(f stack arg, rest)
+            | _ -> raise notCallableError
     | Action f -> f ()
+    | ApplyAfter(v, stack', forceStop, fs, stackOfStacks, stackOfConditions) ->
+        match v with
+        | ApplyAfter(v', stack'', forceStop', fs', stackOfStacks', stackOfConditions') ->
+            ApplyAfter(
+                v',
+                stack'',
+                forceStop',
+                List.concat [ fs'; fs ],
+                List.concat [ stackOfStacks'; stack' :: stackOfStacks ],
+                List.concat [ stackOfConditions'; forceStop :: stackOfConditions ]
+            )
+        | x when not (recognizable x) && not (forceStop x) -> ApplyAfter(eval1 stack' v, stack', forceStop, fs, stackOfStacks, stackOfConditions)
+        | _ ->
+            match fs with
+            | [] -> failwith "Empty ApplyAfter"
+            | [f] -> f v
+            | f :: restF ->
+                let nextV = f v
+                let nextStack::restStacks = stackOfStacks
+                let nextCond::restConds = stackOfConditions
+                ApplyAfter(nextV, nextStack, nextCond, restF, restStacks, restConds)
     | x -> x
 
 and evalUntilRecognizable (stack: ContextStack) (value: Value) =
+    // printfn $"{value}\n-----\n"
     if recognizable value then
         value
     else
@@ -257,7 +344,9 @@ and compileConstructor
         let subtasks = Seq.zip args args'
 
         let results =
-            subtasks |> Seq.map (fun (n, v) -> compilePattern stack n v (Dictionary())) |> Seq.toList
+            subtasks
+            |> Seq.map (fun (n, v) -> compilePattern stack n v (Dictionary()))
+            |> Seq.toList
 
         if not (List.forall Option.isSome results) then
             None
@@ -278,21 +367,12 @@ and compilePattern (stack: ContextStack) (node: Node) (value: Value) (saveTo: Co
         let res =
             let (NamespacedName(_, name')) = nsName
             let ln = lastName name'
-            Some(withSet saveTo ln (Val value))
 
-        match ref' with
-        | Ok(Ref(ctx, getter, _)) ->
-            match getter ctx with
-            | Constructor(cn, argsCount, Type(tn, _)) as cons ->
-                if argsCount <> 0 then
-                    raise (constructorError cn tn argsCount 0)
+            match withSetSafe saveTo ln (Val value) with
+            | Error _ -> None
+            | Ok(res') -> Some res'
 
-                if satisfiesConstructor stack cons value then
-                    Some(saveTo)
-                else
-                    None
-            | _ -> res
-        | _ -> res
+        res
     | ConstructorPattern(nsName, args) ->
         let (Ref(ctx, getter, _)) = getRef stack nsName
 
@@ -325,8 +405,10 @@ and compilePattern (stack: ContextStack) (node: Node) (value: Value) (saveTo: Co
             match evaluated with
             | Object(Constructor("Empty", 0, type'), _) when typeEq type' listRef.Value -> Some(saveTo)
             | _ -> None
-        | head :: tail -> compileConstructor stack (extractConstructor nodeRef.Value) [ head; ListPattern tail ] value saveTo
-    | HeadTailPattern(head, tail) -> compileConstructor stack (extractConstructor nodeRef.Value) [ head; tail ] value saveTo
+        | head :: tail ->
+            compileConstructor stack (extractConstructor nodeRef.Value) [ head; ListPattern tail ] value saveTo
+    | HeadTailPattern(head, tail) ->
+        compileConstructor stack (extractConstructor nodeRef.Value) [ head; tail ] value saveTo
     | _ -> failwith "Trying to compile not-a-pattern"
 
 and evalAll (stack: ContextStack) =
@@ -405,20 +487,20 @@ and applyDefaultTruth (members: Context) =
         Value.Function(fun st v ->
             let (Object(Constructor(_, argsCount, _), _)) = dereference st v
             if argsCount = 0 then false' () else true' ())
-    
+
     let checkedTruth customTruth =
-        Value.Function(
-            fun st v ->
-                let toEval = Value.Application(customTruth, v)
-                let Type(tn, _) as type' = getType st toEval
-                if  not (typeEq type' boolRef.Value) then
-                    raise (truthNotBoolException tn)
-                toEval
-        )
+        Value.Function(fun st v ->
+            let toEval = Value.Application(customTruth, v)
+            let Type(tn, _) as type' = getType st toEval
+
+            if not (typeEq type' boolRef.Value) then
+                raise (truthNotBoolException tn)
+
+            toEval)
 
     if members.ContainsKey "truth" then
         let (Val customTruth) = members["truth"]
-        withSet members "truth" (Val (checkedTruth customTruth))
+        withSet members "truth" (Val(checkedTruth customTruth))
     else
         withSet members "truth" (Val defaultTruth)
 
@@ -462,30 +544,30 @@ and applyDefaultRepr (members: Context) =
         | Has _ -> name + "(" + String.concat ", " (Seq.map (repr st) args) + ")"
 
     let defaultRepr = Value.Function(fun st v -> String(repr st v))
-    
+
     let checkedRepr customRepr =
-        Value.Function(
-            fun st v ->
-                let toEval = Value.Application(customRepr, v)
-                let Type(tn, _) as type' = getType st toEval
-                if  not (typeEq type' stringRef.Value) then
-                    raise (reprNotStringException tn)
-                toEval
-        )
+        Value.Function(fun st v ->
+            let toEval = Value.Application(customRepr, v)
+            let Type(tn, _) as type' = getType st toEval
+
+            if not (typeEq type' stringRef.Value) then
+                raise (reprNotStringException tn)
+
+            toEval)
 
     if members.ContainsKey "repr" then
         let (Val customRepr) = members["repr"]
-        withSet members "repr" (Val (checkedRepr customRepr))
+        withSet members "repr" (Val(checkedRepr customRepr))
     else
         withSet members "repr" (Val defaultRepr)
+
 and applyDefaultInst (members: Context) =
     if members.ContainsKey "inst" then
         raise (notOverridable "inst")
-    
+
     let inst =
-        Value.Function(
-            fun st v ->
-                let (Type(_, ns)) = getType st v
-                if ns = members then true'() else false'()
-        )
+        Value.Function(fun st v ->
+            let (Type(_, ns)) = getType st v
+            if ns = members then true' () else false' ())
+
     withSet members "inst" (Val inst)
