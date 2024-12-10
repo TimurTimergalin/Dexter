@@ -36,8 +36,8 @@ type Node =
     | ConstructorDeclaration of Node * Node list
     | TypeDeclaration of Node * Node list * Node list
 
-    | ImportNamespace of string * Node option
-    | ImportAll of string * Node option
+    | ImportNamespace of string * Node
+    | ImportAll of string * Node
     | Entrypoint of Node
 
     | Eval of Node

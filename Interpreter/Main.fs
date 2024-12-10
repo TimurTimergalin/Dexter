@@ -96,11 +96,7 @@ let rec performProgram
 
                     let aliasName =
                         match alias with
-                        | None ->
-                            let withExt = Path.GetFileName name
-                            let splitArray = withExt.Split '.'
-                            splitArray[splitArray.Length - 1]
-                        | Some(NamespacedName(_, Identifier(name'))) -> name'
+                        | NamespacedName(_, Identifier(name')) -> name'
 
                     if res'.context.ContainsKey(aliasName) then
                         raise (incorrectNameBinding aliasName)
@@ -126,8 +122,7 @@ let rec performProgram
 
                     let ctx' =
                         match alias with
-                        | None -> ctx
-                        | Some(NamespacedName(_, Identifier(aliasName))) ->
+                        | NamespacedName(_, Identifier(aliasName)) ->
                             if res'.context.ContainsKey(aliasName) then
                                 raise (incorrectNameBinding aliasName)
 

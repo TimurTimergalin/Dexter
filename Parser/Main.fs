@@ -283,7 +283,7 @@ let import =
 
     keyword "import"
     >>. anyWs
-    >>. pipe3 (opt targets) source (opt alias) (fun targets' source' alias' ->
+    >>. pipe3 (opt targets) source alias (fun targets' source' alias' ->
         match targets' with
         | None -> ImportNamespace(source', alias')
         | Some _ -> ImportAll(source', alias'))
