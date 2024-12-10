@@ -31,6 +31,13 @@ let combine2 (dict1: Dictionary<'a, 'b>) (dict2: Dictionary<'a, 'b>) =
             dict1[key] <- dict2[key]
 
     result
+    
+let combine2Silent (dict1: Dictionary<'a, 'b>) (dict2: Dictionary<'a, 'b>) =
+    for key in dict2.Keys do
+        if not (dict1.ContainsKey key) then
+            dict1[key] <- dict2[key]
+
+    dict1
 
 let combine (dicts: Dictionary<'a, 'b> seq) (saveTo: Dictionary<'a, 'b>) =
     dicts

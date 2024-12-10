@@ -115,10 +115,7 @@ let rec performProgram
                             pars.module'
                             index'
 
-                    let ctx =
-                        match combine2 res'.context ns.context with
-                        | Ok(ctx') -> ctx'
-                        | Error key -> raise (incorrectNameBinding key)
+                    let ctx = combine2Silent res'.context ns.context
 
                     let ctx' =
                         match alias with
@@ -133,7 +130,6 @@ let rec performProgram
                 | _ -> (res', index'))
             (initRes, index)
             stmts
-
     res
 
 and loadFile (pars: InterpreterParams) (from: string) (index: ModuleIndex) : InterpreterResults * ModuleIndex =
