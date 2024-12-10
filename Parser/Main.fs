@@ -38,7 +38,7 @@ let tier3Expr =
           compound ]
 
 let tier2Expr =
-    pipe2 unaryOperator tier3Expr (fun op node -> Application(op, node))
+    pipe2 (unaryOperator |>> fun x -> NamespacedName([], x)) tier3Expr (fun op node -> Application(op, node))
     <|> tier3Expr
 
 let application =
@@ -93,8 +93,8 @@ let monadBind =
     pipe2
         (keyword "do"
          >>. anyWs
-         >>. opt (pattern true .>>? ws .>>? skipString "<-" .>> anyWs))
-        tier0Expr
+         >>. opt (attempt(pattern true .>>? ws .>>? skipString "<-" .>> anyWs)))
+        (BP tier0Expr)
     <| fun bind body ->
         match bind with
         | None -> MonadBind(SkipPattern, body)
@@ -290,4 +290,4 @@ let import =
 
 let statement = entrypoint <|> import <|> tier1Statement
 
-let program = anyWs >>. (multiline statement true) .>> anyWs .>> eof |>> Program
+let program = anyWs >>. multiline statement true .>> anyWs .>> eof |>> Program

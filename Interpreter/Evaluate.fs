@@ -125,7 +125,7 @@ let rec eval1 (stack: ContextStack) (value: Value) : Value =
                     match cond with
                     | None -> res
                     | Some condExpr ->
-                        if checkCondition (ctx :: stack) (Unrecognizable condExpr) then
+                        if checkCondition [] (Closure(Unrecognizable condExpr, (ctx :: stack), false)) then
                             res
                         else
                             None
@@ -403,7 +403,7 @@ and compilePattern (stack: ContextStack) (node: Node) (value: Value) (saveTo: Co
             let evaluated = dereference stack value
 
             match evaluated with
-            | Object(Constructor("Empty", 0, type'), _) when typeEq type' listRef.Value -> Some(saveTo)
+            | Object(Constructor("End", 0, type'), _) when typeEq type' listRef.Value -> Some(saveTo)
             | _ -> None
         | head :: tail ->
             compileConstructor stack (extractConstructor nodeRef.Value) [ head; ListPattern tail ] value saveTo

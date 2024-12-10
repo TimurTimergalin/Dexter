@@ -19,7 +19,7 @@ let lastName name =
 
 let fullName =
     function
-    | NamespacedName(ns, name) -> (String.concat "." ns) + lastName name
+    | NamespacedName(ns, name) -> (String.concat "." ns) + (if ns <> [] then "." else "") + lastName name
 
 let rec getRef (stack: ContextStack) (NamespacedName(ns, name) as nsName) =
     let fn = fullName nsName

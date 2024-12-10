@@ -1,0 +1,32 @@
+﻿import "Monad.dxt" as Monad
+
+let println obj = {
+    eval print obj
+    eval print "\n"
+}
+
+let printMany s = {
+    eval print s
+    printMany
+}
+
+let printManySep sep = {
+    let printWithSep s = {
+        eval print sep
+        eval print s
+        printWithSep
+    }
+    let printFirst s = {
+        eval print s
+        printWithSep
+    }
+    printFirst
+}
+
+let printlnMany = printManySep "\n"
+
+let minput = Monad.WithEval(fun _ -> input None)
+let mprint s = Monad.WithEval(fun _ -> print s)
+let mprintln s = Monad.WithEval(fun _ -> println s) 
+        
+        

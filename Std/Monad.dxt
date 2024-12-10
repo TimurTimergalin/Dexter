@@ -1,0 +1,18 @@
+﻿import "Lists.dxt" as Lists
+
+type Monad: WithEval(gen) {
+    let (>>=) m f = {
+        let (WithEval(gen)) = m
+        let res = gen None
+        eval res
+        f res
+    }
+}
+
+let combine monadList = 
+    match monadList {
+        case [] -> fail "Cannot combine empty monad list"
+        case f::rest -> {
+            let combined = Lists.fold (>>=) f rest
+    }
+}

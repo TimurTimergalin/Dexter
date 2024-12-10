@@ -1,0 +1,35 @@
+﻿let rev lst = {
+    let rev1 lst acc = match lst {
+        case [] -> acc
+        case h::t -> rev1 t (h::acc)
+    }
+    rev1 lst
+}
+
+let fold folder init lst = 
+    match lst {
+        case [] -> init
+        case h::t -> fold folder (folder init h) t
+    } 
+
+let map func lst =
+    match lst {
+        case [] -> []
+        case h::t -> func h::map func t
+    }
+
+let concat lst1 lst2 =
+    if !lst2 then 
+        lst1 
+    else
+        match lst1 {
+            case [] -> lst2
+            case h::t -> h::concat t lst2
+        }
+
+let filter pred lst =
+    match lst {
+        case [] -> []
+        case h::t when pred h -> h::filter pred t
+        case _::t -> filter pred t
+    } 
