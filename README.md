@@ -56,15 +56,26 @@ entrypoint = res1  # Запустится только, если этот фай
 ```
 import "my_file.dxt" as myFile # Локальный импорт пользовательского файла
 import * from "folder/another_file.dxt" as another # Добавляет все знаения из файла в глобальный скоуп. ПРи пересечении имен - новые имена игнорируются.
+import "IO.dxt" as IO # Также возможны импорты из стандартной бибилиотеки и сторонних библиотек
 
 let a = myFile.member
 let b = another.member
 let c = member # из another
 ```
 
+### Монаидические выражения
 
+```
+import "IO.dxt" as IO
 
+entrypoint = exec {
+	do inp <- IO.minput
+	let res = inp + "1"
+	do IO.mprintln res
+}
+```
 
+### Другие примеры
 
-
+Другие примеры можно найти в папке `Examples` и в стандартной библиотеке
 
